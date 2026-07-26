@@ -37,3 +37,7 @@ dist/
 # Variables d'environnement
 .env
 .env.local
+
+.agents/
+.claude/
+.windsurf/
