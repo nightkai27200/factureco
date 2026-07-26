@@ -1,0 +1,277 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model SubscriptionPlan {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  price Float
+
+  features Json
+
+  users User[]
+
+  createdAt DateTime @default(now())
+
+  stripePriceId String? @unique
+  
+}
+
+model User {
+  id String @id @default(uuid())
+
+  email String @unique
+
+  passwordHash String
+
+  name String?
+
+  role Role @default(USER)
+
+  clients Client[]
+
+  quotes Quote[]
+
+  invoices Invoice[]
+
+  company Company?
+
+  subscriptionId String?
+
+  subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
+
+  subscriptionStatus String @default("FREE")
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  stripeCustomerId String?
+
+  stripeSubscriptionId String?
+}
+
+model Client {
+  id String @id @default(uuid())
+
+  name String
+
+  email String?
+
+  phone String?
+
+  company String?
+
+  address String?
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  quotes Quote[]
+
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model DocumentCounter {
+
+  id String @id @default(uuid())
+
+  type String
+
+  year Int
+
+  value Int @default(0)
+
+
+  @@unique([type, year])
+
+}
+
+
+
+
+
+model Quote {
+  id String @id @default(uuid())
+
+  number String
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  title String?
+
+  description String?
+
+  amount Float
+
+  subtotal Float @default(0)
+
+  vatRate Float @default(20)
+
+  vatAmount Float @default(0)
+
+  status QuoteStatus
+
+  clientId String
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  quoteItems QuoteItem[]
+
+  invoice Invoice? // <-- IMPORTANT
+}
+
+model QuoteItem {
+  id String @id @default(uuid())
+
+  description String
+
+  quantity Float
+
+  unitPrice Float
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  total Float
+
+  quoteId String
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id String @id @default(uuid())
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  status InvoiceStatus
+
+  number String
+
+  amount Float
+
+  subtotal Float @default(0)
+
+  vatRate Float @default(20)
+
+  vatAmount Float @default(0)
+
+  quoteId String? @unique
+
+  quote Quote? @relation(fields: [quoteId], references: [id])
+
+  clientId String
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  invoiceItems InvoiceItem[]
+}
+
+model InvoiceItem {
+  id String @id @default(uuid())
+
+  description String
+
+  quantity Float
+
+  unitPrice Float
+
+  total Float
+
+  invoiceId String
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model Company {
+  id String @id @default(uuid())
+
+  name String
+
+  address String?
+
+  city String?
+
+  phone String?
+
+  email String?
+
+  website String?
+
+  logo String?
+
+  siret String?
+
+  vatNumber String?
+
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+enum QuoteStatus {
+  DRAFT
+
+  SENT
+
+  ACCEPTED
+
+  REFUSED
+
+  CONVERTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+
+  SENT
+
+  PAID
+
+  CANCELLED
+}
