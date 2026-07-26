@@ -16,6 +16,7 @@ import {
 } from "@/services/quote.service";
 
 
+
 import {
   getClients,
   Client
@@ -37,7 +38,7 @@ type Line = {
 
 
 
-export default function DevisPage(){
+export default function QuotesPage() {
 
 
 const [quotes,setQuotes] =
