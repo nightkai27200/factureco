@@ -214,10 +214,14 @@ async login(user:any){
 
 
   console.log(
-    "JWT SIGN SECRET LENGTH:",
-    process.env.JWT_SECRET?.length
-  );
+  "JWT SIGN SECRET LENGTH:",
+  process.env.JWT_SECRET?.length
+);
 
+console.log(
+  "JWT SIGN SECRET START:",
+  process.env.JWT_SECRET?.substring(0,5)
+);
 
   const token =
     this.jwtService.sign(payload);

@@ -6,39 +6,62 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor() {
+
     console.log('JWT STRATEGY CHARGEE');
+
 
     const jwtSecret = process.env.JWT_SECRET;
 
-console.log(
-  "JWT VERIFY SECRET:",
-  jwtSecret
-);
 
-console.log(
-  "JWT SECRET STRATEGY:",
-  jwtSecret
-);
+    console.log(
+      "JWT VERIFY SECRET LENGTH:",
+      jwtSecret?.length
+    );
 
-if (!jwtSecret) {
-  throw new Error('JWT_SECRET manquant dans les variables d’environnement');
-}
+
+    if (!jwtSecret) {
+      throw new Error(
+        'JWT_SECRET manquant dans les variables d’environnement'
+      );
+    }
+
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: jwtSecret,
+
+      jwtFromRequest:
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+
+      secretOrKey:
+        jwtSecret,
+
     });
+
   }
+
 
   async validate(payload: any) {
-    console.log('========== JWT VALIDATE ==========');
+
+    console.log(
+      '========== JWT VALIDATE =========='
+    );
+
     console.log(payload);
-    console.log('=================================');
+
+    console.log(
+      '================================='
+    );
+
 
     return {
+
       id: payload.sub,
+
       email: payload.email,
+
       role: payload.role,
+
     };
+
   }
+
 }
