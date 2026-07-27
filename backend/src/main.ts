@@ -13,16 +13,8 @@ async function bootstrap() {
 
 
   app.enableCors({
-
-    origin: [
-      "https://factureco.vercel.app",
-      "http://localhost:3001",
-      "http://localhost:3000",
-      "http://192.168.1.43:3001",
-    ],
-
+    origin: true,
     credentials: true,
-
   });
 
 
