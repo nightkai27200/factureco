@@ -10,9 +10,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const jwtSecret = process.env.JWT_SECRET;
 
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET manquant dans les variables d’environnement');
-    }
+console.log(
+  "JWT SECRET STRATEGY:",
+  jwtSecret
+);
+
+if (!jwtSecret) {
+  throw new Error('JWT_SECRET manquant dans les variables d’environnement');
+}
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

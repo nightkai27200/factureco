@@ -10,6 +10,12 @@ import { JwtStrategy } from './jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
 
 
+console.log(
+  "JWT SECRET AU DEMARRAGE:",
+  process.env.JWT_SECRET
+);
+
+
 @Module({
 
   imports: [
@@ -20,40 +26,32 @@ import { PrismaModule } from '../prisma/prisma.module';
 
     PassportModule,
 
-
     JwtModule.register({
 
-  secret: process.env.JWT_SECRET,
+      secret: process.env.JWT_SECRET,
 
-  signOptions: {
-    expiresIn: '1d',
-  },
+      signOptions: {
+        expiresIn: '1d',
+      },
 
-}),
+    }),
 
   ],
 
 
   controllers: [
-
     AuthController,
-
   ],
 
 
   providers: [
-
     AuthService,
-
     JwtStrategy,
-
   ],
 
 
   exports: [
-
     AuthService,
-
   ],
 
 })
