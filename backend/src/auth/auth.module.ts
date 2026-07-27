@@ -23,13 +23,13 @@ import { PrismaModule } from '../prisma/prisma.module';
 
     JwtModule.register({
 
-      secret: 'secret-key-dev',
+  secret: process.env.JWT_SECRET,
 
-      signOptions: {
-        expiresIn: '1d',
-      },
+  signOptions: {
+    expiresIn: '1d',
+  },
 
-    }),
+}),
 
   ],
 
