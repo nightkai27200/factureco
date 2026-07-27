@@ -1,13 +1,53 @@
 import axios from "axios";
 
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://factureco-production.up.railway.app";
+
+
 const api = axios.create({
 
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://factureco-production.up.railway.app",
-
-  withCredentials: true,
+  baseURL: API_URL,
 
 });
+
+
+
+api.interceptors.request.use((config) => {
+
+
+  if (typeof window !== "undefined") {
+
+
+    const token =
+      localStorage.getItem("token");
+
+
+    if (token) {
+
+
+      config.headers = {
+
+        ...(config.headers || {}),
+
+        Authorization:
+          `Bearer ${token}`,
+
+      };
+
+
+    }
+
+
+  }
+
+
+  return config;
+
+
+});
+
+
 
 export default api;

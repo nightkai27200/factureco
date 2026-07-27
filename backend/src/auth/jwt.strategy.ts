@@ -7,21 +7,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor() {
 
-    console.log('JWT STRATEGY CHARGEE');
-
-
     const jwtSecret = process.env.JWT_SECRET;
 
 
-    console.log(
-      "JWT VERIFY SECRET LENGTH:",
-      jwtSecret?.length
-    );
+    console.log("========================");
+    console.log("JWT VERIFY SECRET LENGTH:", jwtSecret?.length);
+    console.log("JWT VERIFY SECRET:", jwtSecret);
+    console.log("========================");
 
 
     if (!jwtSecret) {
       throw new Error(
-        'JWT_SECRET manquant dans les variables d’environnement'
+        "JWT_SECRET manquant"
       );
     }
 
@@ -39,16 +36,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
 
-  async validate(payload: any) {
+  async validate(payload:any){
 
     console.log(
-      '========== JWT VALIDATE =========='
-    );
-
-    console.log(payload);
-
-    console.log(
-      '================================='
+      "JWT VALIDATE OK",
+      payload
     );
 
 

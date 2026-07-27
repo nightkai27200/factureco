@@ -15,34 +15,84 @@ interface LoginResponse {
 
 
 
+// Instance axios avec token automatique
 
-export async function login(
+export const api = axios.create({
 
-  email: string,
+  baseURL: API_URL,
 
-  password: string
-
-): Promise<string> {
-
+});
 
 
-  const response = await axios.post<LoginResponse>(
 
-    `${API_URL}/auth/login`,
+/// Ajout automatique du JWT
 
-    {
+api.interceptors.request.use(
 
-      email,
+  (config) => {
 
-      password,
+
+    const token =
+      localStorage.getItem("token");
+
+
+    if(token){
+
+      config.headers = {
+
+        ...(config.headers || {}),
+
+        Authorization:
+          `Bearer ${token}`,
+
+      };
 
     }
 
-  );
+
+    return config;
+
+  },
+
+
+  (error)=>{
+
+    return Promise.reject(error);
+
+  }
+
+);
 
 
 
-  const token = response.data.access_token;
+
+
+export async function login(
+
+  email:string,
+
+  password:string
+
+):Promise<string>{
+
+
+
+  const response =
+ await api.post<LoginResponse>(
+
+      `${API_URL}/auth/login`,
+
+      {
+        email,
+        password,
+      }
+
+    );
+
+
+
+  const token =
+    response.data.access_token;
 
 
 
@@ -102,7 +152,7 @@ export function isAuthenticated(){
   const token = getToken();
 
 
-  return token !== null;
+  return !!token;
 
 
 }
