@@ -7,13 +7,17 @@ async function bootstrap() {
   const app = await NestFactory.create(
     AppModule,
     {
-      rawBody: true
+      rawBody: true,
     }
   );
 
 
   app.enableCors({
-    origin: true,
+    origin: [
+      "https://factureco.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ],
     credentials: true,
   });
 
