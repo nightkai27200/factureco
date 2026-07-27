@@ -4,50 +4,42 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
 
-  const app = await NestFactory.create(AppModule, {
-    rawBody: true,
-  });
+  const app = await NestFactory.create(
+    AppModule,
+    {
+      rawBody: true,
+    }
+  );
 
 
   app.enableCors({
 
-  origin: (origin, callback) => {
+    origin: (origin, callback) => {
 
-    if (!origin) {
-      return callback(null, true);
-    }
+      if (!origin) {
+        return callback(null, true);
+      }
 
-    if (
-      origin.endsWith(".vercel.app") ||
-      origin.includes("localhost")
-    ) {
-      return callback(null, true);
-    }
 
-    callback(new Error("CORS blocked"));
+      if (
+        origin.endsWith(".vercel.app") ||
+        origin.includes("localhost")
+      ) {
+        return callback(null, true);
+      }
 
-  },
 
-  credentials: true,
+      callback(new Error("Not allowed by CORS"));
 
-});
+    },
 
-  app.getHttpAdapter().get('/', (req, res) => {
-    res.status(200).json({
-      status: "ok",
-      message: "FactureCo API running"
-    });
+    credentials: true,
+
   });
 
 
   await app.listen(
-    process.env.PORT || 3000,
-    "0.0.0.0"
-  );
-
-
-  console.log(
-    `🚀 API running on port ${process.env.PORT}`
+    process.env.PORT || 3000
   );
 
 }
