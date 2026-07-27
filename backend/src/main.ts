@@ -10,15 +10,27 @@ async function bootstrap() {
 
 
   app.enableCors({
-  origin: [
-    "https://factureco.vercel.app",
-    "https://factureco-e24f74xd7-ms-consulting.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:3001",
-  ],
-  credentials: true,
-});
 
+  origin: (origin, callback) => {
+
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (
+      origin.endsWith(".vercel.app") ||
+      origin.includes("localhost")
+    ) {
+      return callback(null, true);
+    }
+
+    callback(new Error("CORS blocked"));
+
+  },
+
+  credentials: true,
+
+});
 
   app.getHttpAdapter().get('/', (req, res) => {
     res.status(200).json({
