@@ -11,6 +11,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwtSecret = process.env.JWT_SECRET;
 
 console.log(
+  "JWT VERIFY SECRET:",
+  jwtSecret
+);
+
+console.log(
   "JWT SECRET STRATEGY:",
   jwtSecret
 );
