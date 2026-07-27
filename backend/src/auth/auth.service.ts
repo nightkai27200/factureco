@@ -182,10 +182,6 @@ async validateUser(
 
 async login(user:any){
 
-
-
-  // récupération abonnement
-
   const userComplete =
     await this.prisma.user.findUnique({
 
@@ -193,19 +189,12 @@ async login(user:any){
         id:user.id,
       },
 
-
       include:{
-
         subscription:true,
-
         company:true,
-
       },
 
     });
-
-
-
 
 
   const payload = {
@@ -224,15 +213,25 @@ async login(user:any){
   };
 
 
+  console.log(
+    "JWT SIGN SECRET LENGTH:",
+    process.env.JWT_SECRET?.length
+  );
 
+
+  const token =
+    this.jwtService.sign(payload);
+
+
+  console.log(
+    "TOKEN CREE:",
+    token.substring(0,30)
+  );
 
 
   return {
 
-
-    access_token:
-      this.jwtService.sign(payload),
-
+    access_token: token,
 
 
     user:{
@@ -266,6 +265,7 @@ async login(user:any){
 
 }
 
-
-
 }
+
+
+
