@@ -22,9 +22,15 @@ async function bootstrap() {
   });
 
 
+  const port = process.env.PORT || 3000;
+
   await app.listen(
-    process.env.PORT || 3000
+    port,
+    "0.0.0.0"
   );
+
+
+  console.log(`🚀 API running on port ${port}`);
 
 }
 
