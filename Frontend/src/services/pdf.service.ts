@@ -2,7 +2,8 @@ import axios from "axios";
 
 
 const API_URL =
-  "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://factureco-production.up.railway.app";
 
 
 

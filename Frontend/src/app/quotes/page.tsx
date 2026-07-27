@@ -733,7 +733,7 @@ onClick={async()=>{
 
 await fetch(
 
-`http://localhost:3000/quotes/${q.id}/convert`,
+`https://factureco-production.up.railway.app/quotes/${q.id}/convert`,
 
 {
 
@@ -784,7 +784,7 @@ onClick={async()=>{
 
 await fetch(
 
-`http://localhost:3000/quotes/${q.id}`,
+`https://factureco-production.up.railway.app/quotes/${q.id}/convert`,
 
 {
 

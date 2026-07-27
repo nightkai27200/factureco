@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import api from "@/services/api";
+import { API_URL } from "@/lib/config";
 
 
 
@@ -573,7 +574,7 @@ Logo entreprise
 
 <img
 
-src={`http://localhost:3000/${company.logo}`}
+src={`${API_URL}/${company.logo}`}
 
 alt="Logo entreprise"
 

@@ -5,6 +5,8 @@ import {
   useState
 } from "react";
 
+import { API_URL } from "@/lib/config";
+
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 import {
@@ -730,7 +732,7 @@ onClick={async()=>{
 
 await fetch(
 
-`http://localhost:3000/quotes/${q.id}/convert`,
+`${API_URL}/quotes/${q.id}/convert`,
 
 {
 
@@ -781,7 +783,7 @@ onClick={async()=>{
 
 await fetch(
 
-`http://localhost:3000/quotes/${q.id}`,
+`${API_URL}/quotes/${q.id}`,
 
 {
 
