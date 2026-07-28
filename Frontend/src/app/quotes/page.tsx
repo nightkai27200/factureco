@@ -1,11 +1,11 @@
-
-
 "use client";
 
 import {
   useEffect,
   useState
 } from "react";
+
+import { API_URL } from "@/lib/config";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -14,7 +14,6 @@ import {
   createQuote,
   Quote
 } from "@/services/quote.service";
-
 
 
 import {
@@ -38,7 +37,7 @@ type Line = {
 
 
 
-export default function QuotesPage() {
+export default function DevisPage(){
 
 
 const [quotes,setQuotes] =
@@ -669,6 +668,9 @@ onClick={async()=>{
 
 try{
 
+const token =
+localStorage.getItem("token");
+
 
 const response =
 await api.get<Blob>(
@@ -676,6 +678,13 @@ await api.get<Blob>(
 `/quotes/${q.id}/pdf`,
 
 {
+
+headers:{
+
+Authorization:
+`Bearer ${token}`
+
+},
 
 responseType:"blob"
 
@@ -705,6 +714,7 @@ console.error(
 error
 );
 
+
 alert(
 "Impossible de télécharger le PDF"
 );
@@ -733,7 +743,7 @@ onClick={async()=>{
 
 await fetch(
 
-`https://factureco-production.up.railway.app/quotes/${q.id}/convert`,
+`${API_URL}/quotes/${q.id}/convert`,
 
 {
 
@@ -784,7 +794,7 @@ onClick={async()=>{
 
 await fetch(
 
-`https://factureco-production.up.railway.app/quotes/${q.id}/convert`,
+`${API_URL}/quotes/${q.id}`,
 
 {
 

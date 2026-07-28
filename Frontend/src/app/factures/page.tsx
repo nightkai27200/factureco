@@ -72,6 +72,8 @@ await api.get<Invoice[]>(
 "/invoices"
 );
 
+console.log("FACTURES RECUES =>", response.data);
+
 
 
 setInvoices(

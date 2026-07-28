@@ -333,27 +333,21 @@ return this.prisma.invoice.create({
   );
 
 
-  const invoice =
-    await this.prisma.invoice.findUnique({
-
-      where:{
-  id,
-  userId,
-},
-      include:{
-        client:true,
-        invoiceItems:true,
-
-        user:{
-          include:{
-            company:true,
-          },
-        },
-
+ const invoice = await this.prisma.invoice.findFirst({
+  where: {
+    id,
+    userId,
+  },
+  include: {
+    client: true,
+    invoiceItems: true,
+    user: {
+      include: {
+        company: true,
       },
-
-    });
-
+    },
+  },
+});
 
   console.log(
     "FACTURE PDF =>",
