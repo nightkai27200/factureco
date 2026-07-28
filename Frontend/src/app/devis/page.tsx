@@ -668,6 +668,9 @@ onClick={async()=>{
 
 try{
 
+const token =
+localStorage.getItem("token");
+
 
 const response =
 await api.get<Blob>(
@@ -675,6 +678,13 @@ await api.get<Blob>(
 `/quotes/${q.id}/pdf`,
 
 {
+
+headers:{
+
+Authorization:
+`Bearer ${token}`
+
+},
 
 responseType:"blob"
 
@@ -703,6 +713,7 @@ console.error(
 "Erreur PDF",
 error
 );
+
 
 alert(
 "Impossible de télécharger le PDF"
