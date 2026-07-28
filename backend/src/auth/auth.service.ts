@@ -223,8 +223,13 @@ console.log(
   process.env.JWT_SECRET?.substring(0,5)
 );
 
-  const token =
-    this.jwtService.sign(payload);
+  
+
+const token =
+
+
+
+  this.jwtService.sign(payload);
 
 
   console.log(
