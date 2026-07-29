@@ -77,32 +77,46 @@ update:data,
 
 
 async update(
- userId:string,
- data:any,
+  userId:string,
+  data:any,
 ){
 
-
-return this.prisma.company.upsert({
-
-where:{
- userId,
-},
-
-
-create:{
-
- ...data,
-
- userId,
-
-},
+  const company =
+    await this.prisma.company.findUnique({
+      where:{
+        userId,
+      },
+    });
 
 
-update:data,
+  if(company){
+
+    return this.prisma.company.update({
+
+      where:{
+        userId,
+      },
+
+      data,
+
+    });
+
+  }
 
 
-});
+  return this.prisma.company.create({
 
+    data:{
+      userId,
+
+      name:
+      data.name ?? "Mon entreprise",
+
+      ...data,
+
+    },
+
+  });
 
 }
 
