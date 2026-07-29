@@ -323,44 +323,34 @@ return this.prisma.invoice.create({
   userId:string,
 ){
 
-  const invoices =
-    await this.prisma.invoice.findMany();
+  console.log("PDF ID RECU =>", id);
+  console.log("PDF USER ID =>", userId);
 
 
-  console.log(
-    "TOUTES LES FACTURES =>",
-    JSON.stringify(invoices,null,2)
-  );
-
-
- const invoice = await this.prisma.invoice.findFirst({
-  where: {
-    id,
-    userId,
-  },
-  include: {
-    client: true,
-    invoiceItems: true,
-    user: {
-      include: {
-        company: true,
+  const invoice = await this.prisma.invoice.findFirst({
+    where:{
+      id,
+      userId,
+    },
+    include:{
+      client:true,
+      invoiceItems:true,
+      user:{
+        include:{
+          company:true,
+        },
       },
     },
-  },
-});
+  });
 
-  console.log(
-    "FACTURE PDF =>",
-    invoice
-  );
+
+  console.log("FACTURE TROUVEE =>", invoice);
 
 
   if(!invoice){
-
     throw new NotFoundException(
       'Invoice not found',
     );
-
   }
 
 
