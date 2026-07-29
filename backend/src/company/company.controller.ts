@@ -31,6 +31,8 @@ import { CompanyService } from './company.service';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+import { existsSync, mkdirSync } from 'fs';
+
 
 
 @Controller('company')
@@ -108,21 +110,37 @@ update(
       storage: diskStorage({
 
         destination: (
-          req,
-          file,
-          callback
-        ) => {
+  req,
+  file,
+  callback
+) => {
 
-          callback(
-            null,
-            join(
-              process.cwd(),
-              'uploads',
-              'logos'
-            )
-          );
+  const uploadPath =
+    join(
+      process.cwd(),
+      'uploads',
+      'logos'
+    );
 
-        },
+
+  if(!existsSync(uploadPath)){
+
+    mkdirSync(
+      uploadPath,
+      {
+        recursive:true
+      }
+    );
+
+  }
+
+
+  callback(
+    null,
+    uploadPath
+  );
+
+},
 
 
         filename(
@@ -177,63 +195,90 @@ update(
     }
   )
 )
+
+
 async uploadLogo(
 
- @Req() req:any,
+  @Req() req:any,
 
- @UploadedFile() file:any,
+  @UploadedFile() file:any,
 
 ){
 
-
- console.log(
-   "USER =>",
-   req.user
- );
-
-
- console.log(
-   "FILE =>",
-   file
- );
-
-
-
- if(!file){
-
-  throw new Error(
-    "Aucun logo envoyé"
+  console.log(
+    "USER =>",
+    req.user
   );
 
- }
+
+  console.log(
+    "FILE =>",
+    file
+  );
 
 
+  if(!file){
 
- const company =
-
- await this.companyService.update(
-
-  req.user.id,
-
-
-  {
-
-   logo:
-   `/uploads/logos/${file.filename}`
+    throw new Error(
+      "Aucun logo envoyé"
+    );
 
   }
 
- );
 
 
- console.log(
-  "COMPANY =>",
-  company
- );
+  console.log(
+    "LOGO PATH =>",
+    file.path
+  );
 
 
- return company;
+  try {
+
+
+    const company =
+
+    await this.companyService.update(
+
+      req.user.id,
+
+
+      {
+
+        logo:
+        `/uploads/logos/${file.filename}`
+
+      }
+
+    );
+
+
+
+    console.log(
+      "COMPANY =>",
+      company
+    );
+
+
+    return company;
+
+
+
+  } catch(error){
+
+
+    console.error(
+      "ERREUR UPDATE LOGO =>",
+      error
+    );
+
+
+    throw error;
+
+
+  }
 
 
 }
+
 }
