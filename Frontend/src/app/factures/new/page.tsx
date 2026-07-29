@@ -227,17 +227,19 @@ setLoading(true);
 await api.post(
 "/invoices",
 {
-
 clientId,
 
-items,
+items: items.map(item => ({
+  description:item.description,
+  quantity:item.quantity,
+  unitPrice:item.unitPrice,
+  total:item.quantity * item.unitPrice
+})),
 
 amount:totalTTC,
-
 status:"DRAFT"
 
 }
-
 );
 
 
