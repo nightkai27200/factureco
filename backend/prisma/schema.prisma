@@ -30,7 +30,6 @@ model SubscriptionPlan {
   createdAt DateTime @default(now())
 
   stripePriceId String? @unique
-  
 }
 
 model User {
@@ -56,15 +55,17 @@ model User {
 
   subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
 
+  // Statut abonnement
   subscriptionStatus String @default("FREE")
+
+  // Stripe
+  stripeCustomerId String? @unique
+
+  stripeSubscriptionId String? @unique
 
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
-
-  stripeCustomerId String?
-
-  stripeSubscriptionId String?
 }
 
 model Client {
@@ -93,10 +94,7 @@ model Client {
   updatedAt DateTime @updatedAt
 }
 
-
-
 model DocumentCounter {
-
   id String @id @default(uuid())
 
   type String
@@ -105,14 +103,8 @@ model DocumentCounter {
 
   value Int @default(0)
 
-
   @@unique([type, year])
-
 }
-
-
-
-
 
 model Quote {
   id String @id @default(uuid())

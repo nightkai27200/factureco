@@ -5,206 +5,33 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class SubscriptionService {
 
+
   constructor(
     private prisma: PrismaService,
   ) {}
 
 
+
   async checkInvoiceLimit(userId:string){
 
- const user =
- await this.prisma.user.findUnique({
 
-  where:{
-   id:userId,
-  },
+    const user =
+    await this.prisma.user.findUnique({
 
-  include:{
-   subscription:true,
-   invoices:true,
-  },
-
- });
-
-
- if(!user){
-
-  throw new ForbiddenException(
-   "Utilisateur introuvable"
-  );
-
- }
-
-
- const features =
- user.subscription?.features as any;
-
-
- const maxInvoices =
- features?.maxInvoices ?? 5;
-
-
-
- if(
-  maxInvoices !== -1 &&
-  user.invoices.length >= maxInvoices
- ){
-
-  throw new ForbiddenException(
-   `Limite atteinte : ${maxInvoices} factures maximum avec votre abonnement.`
-  );
-
- }
-
-
- return true;
-
-}
-
-
-
-async changePlan(
-userId:string,
-plan:string,
-){
-
-
-const subscription =
-await this.prisma.subscriptionPlan.findUnique({
-
-where:{
-name:plan,
-},
-
-});
-
-
-
-if(!subscription){
-
-throw new Error(
-"Plan inexistant"
-);
-
-}
-
-
-
-return this.prisma.user.update({
-
-where:{
-id:userId,
-},
-
-
-data:{
-
-
-subscriptionId:
-subscription.id,
-
-
-subscriptionStatus:
-plan,
-
-
-},
-
-
-include:{
-
-
-subscription:true,
-
-
-},
-
-
-});
-
-
-}
-
-
-
-  async upgradeToStarter(userId: string) {
-
-
-    const starterPlan =
-      await this.prisma.subscriptionPlan.findUnique({
-
-        where: {
-          name: "STARTER",
-        },
-
-      });
-
-
-
-    if (!starterPlan) {
-
-      throw new ForbiddenException(
-        "Plan STARTER introuvable"
-      );
-
-    }
-
-
-
-    return this.prisma.user.update({
-
-      where: {
-        id: userId,
+      where:{
+        id:userId,
       },
 
-
-      data: {
-
-        subscriptionId:
-          starterPlan.id,
-
-
-        subscriptionStatus:
-          "ACTIVE",
-
-      },
-
-
-      include: {
-
-        subscription: true,
-
+      include:{
+        subscription:true,
+        invoices:true,
       },
 
     });
 
 
-  }
 
-
-
-
-
-  async checkClientLimit(userId: string) {
-
-
-    const user =
-      await this.prisma.user.findUnique({
-
-        where: {
-          id: userId,
-        },
-
-        include: {
-          subscription: true,
-          clients: true,
-        },
-
-      });
-
-
-
-    if (!user) {
+    if(!user){
 
       throw new ForbiddenException(
         "Utilisateur introuvable"
@@ -215,29 +42,85 @@ subscription:true,
 
 
     const features =
-      user.subscription?.features as any;
+    user.subscription?.features as any;
+
+
+
+    const maxInvoices =
+    features?.maxInvoices ?? 5;
+
+
+
+    if(
+      maxInvoices !== -1 &&
+      user.invoices.length >= maxInvoices
+    ){
+
+      throw new ForbiddenException(
+        `Limite atteinte : ${maxInvoices} factures maximum avec votre abonnement.`
+      );
+
+    }
+
+
+    return true;
+
+  }
+
+
+
+
+
+
+  async checkClientLimit(userId:string){
+
+
+    const user =
+    await this.prisma.user.findUnique({
+
+      where:{
+        id:userId,
+      },
+
+      include:{
+        subscription:true,
+        clients:true,
+      },
+
+    });
+
+
+
+    if(!user){
+
+      throw new ForbiddenException(
+        "Utilisateur introuvable"
+      );
+
+    }
+
+
+
+    const features =
+    user.subscription?.features as any;
 
 
 
     const maxClients =
-      features?.maxClients ?? 10;
+    features?.maxClients ?? 5;
 
 
 
-    if (
+    if(
       maxClients !== -1 &&
       user.clients.length >= maxClients
-    ) {
-
+    ){
 
       throw new ForbiddenException(
-
         `Limite atteinte : ${maxClients} clients maximum avec votre abonnement.`
-
       );
 
     }
-
 
 
     return true;
@@ -248,26 +131,27 @@ subscription:true,
 
 
 
-  async checkQuoteLimit(userId: string) {
+
+  async checkQuoteLimit(userId:string){
 
 
     const user =
-      await this.prisma.user.findUnique({
+    await this.prisma.user.findUnique({
 
-        where: {
-          id: userId,
-        },
+      where:{
+        id:userId,
+      },
 
-        include: {
-          subscription: true,
-          quotes: true,
-        },
+      include:{
+        subscription:true,
+        quotes:true,
+      },
 
-      });
+    });
 
 
 
-    if (!user) {
+    if(!user){
 
       throw new ForbiddenException(
         "Utilisateur introuvable"
@@ -278,29 +162,25 @@ subscription:true,
 
 
     const features =
-      user.subscription?.features as any;
+    user.subscription?.features as any;
 
 
 
     const maxQuotes =
-      features?.maxQuotes ?? 5;
+    features?.maxQuotes ?? 5;
 
 
 
-    if (
+    if(
       maxQuotes !== -1 &&
       user.quotes.length >= maxQuotes
-    ) {
-
+    ){
 
       throw new ForbiddenException(
-
         `Limite atteinte : ${maxQuotes} devis maximum avec votre abonnement.`
-
       );
 
     }
-
 
 
     return true;
@@ -311,25 +191,27 @@ subscription:true,
 
 
 
-  async getUserSubscription(userId: string) {
+
+
+  async getUserSubscription(userId:string){
 
 
     const user =
-      await this.prisma.user.findUnique({
+    await this.prisma.user.findUnique({
 
-        where: {
-          id: userId,
-        },
+      where:{
+        id:userId,
+      },
 
-        include: {
-          subscription: true,
-        },
+      include:{
+        subscription:true,
+      },
 
-      });
+    });
 
 
 
-    if (!user) {
+    if(!user){
 
       throw new ForbiddenException(
         "Utilisateur introuvable"
@@ -341,15 +223,15 @@ subscription:true,
 
     return {
 
-      id: user.id,
+      id:user.id,
 
-      email: user.email,
+      email:user.email,
 
       subscriptionStatus:
-        user.subscriptionStatus,
+      user.subscriptionStatus,
 
       subscription:
-        user.subscription,
+      user.subscription,
 
     };
 

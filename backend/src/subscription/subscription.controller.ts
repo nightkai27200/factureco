@@ -8,69 +8,39 @@ import {
 } from '@nestjs/common';
 
 import { SubscriptionService } from './subscription.service';
+import { StripeService } from '../stripe/stripe.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
 
 @Controller('subscription')
 export class SubscriptionController {
 
+  constructor(
+    private subscriptionService: SubscriptionService,
+    private stripeService: StripeService,
+  ) {}
 
-constructor(
- private subscriptionService: SubscriptionService,
-){}
+  // Abonnement actuel
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMySubscription(
+    @Req() req: any,
+  ) {
+    return this.subscriptionService.getUserSubscription(
+      req.user.id,
+    );
+  }
 
-
-
-
-// abonnement actuel
-@Get('me')
-@UseGuards(JwtAuthGuard)
-async getMySubscription(
-@Req() req:any,
-){
-
-
-return this.subscriptionService.getUserSubscription(
-req.user.id,
-);
-
-
-}
-
-
-
-
-
-// changement de plan
-@Post('upgrade/:plan')
-@UseGuards(JwtAuthGuard)
-async upgrade(
-
-@Req() req:any,
-
-@Param('plan') plan:string,
-
-){
-
-
-
-console.log(
-"Upgrade demandé :",
-plan
-);
-
-
-
-return this.subscriptionService.changePlan(
-
-req.user.id,
-
-plan,
-
-);
-
-
-}
-
-
+  // Passage à l'offre STARTER
+  @Post('upgrade/:plan')
+  @UseGuards(JwtAuthGuard)
+  async upgrade(
+    @Req() req: any,
+    @Param('plan') plan: string,
+  ) {
+    return this.stripeService.createCheckoutSession(
+      plan,
+      req.user.email,
+      req.user.id,
+    );
+  }
 }

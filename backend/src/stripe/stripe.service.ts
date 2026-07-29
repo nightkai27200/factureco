@@ -15,17 +15,18 @@ import { PrismaService } from '../prisma/prisma.service';
 export class StripeService {
 
 
-private stripe:Stripe;
+private stripe: Stripe;
 
 
 
 constructor(
 
-private config:ConfigService,
+private config: ConfigService,
 
-private prisma:PrismaService
+private prisma: PrismaService
 
 ){
+
 
 const stripeKey =
 this.config.get<string>(
@@ -33,11 +34,12 @@ this.config.get<string>(
 );
 
 
+
 if(!stripeKey){
 
-  throw new Error(
-    "STRIPE_SECRET_KEY manquante dans .env.local"
-  );
+throw new Error(
+"STRIPE_SECRET_KEY manquante dans .env.local"
+);
 
 }
 
@@ -60,11 +62,15 @@ apiVersion:"2026-06-24.dahlia"
 
 
 
+
+
+
 async createCheckoutSession(
   plan:string,
   email:string,
   userId:string
 ){
+
 
 
 const subscriptionPlan =
@@ -78,6 +84,7 @@ name:plan
 
 
 
+
 if(!subscriptionPlan){
 
 throw new Error(
@@ -85,6 +92,7 @@ throw new Error(
 );
 
 }
+
 
 
 
@@ -101,14 +109,17 @@ throw new Error(
 
 
 
+
 const session =
 await this.stripe.checkout.sessions.create({
 
 mode:"subscription",
 
 
+
 customer_email:
 email,
+
 
 
 line_items:[
@@ -127,14 +138,13 @@ quantity:1
 
 
 success_url:
-
-"http://localhost:3000/payment-success",
+"https://factureco.vercel.app/payment-success?session_id={CHECKOUT_SESSION_ID}",
 
 
 
 cancel_url:
+"https://factureco.vercel.app/payment-cancel",
 
-"http://localhost:3000/payment-cancel",
 
 
 
@@ -155,6 +165,7 @@ userId:userId
 
 
 
+
 return {
 
 url:session.url
@@ -163,6 +174,9 @@ url:session.url
 
 
 }
+
+
+
 
 
 
@@ -178,10 +192,12 @@ signature:string
 ){
 
 
+
 const endpointSecret =
 this.config.get<string>(
 "STRIPE_WEBHOOK_SECRET"
 );
+
 
 
 
@@ -192,6 +208,8 @@ throw new Error(
 );
 
 }
+
+
 
 
 
@@ -214,6 +232,7 @@ endpointSecret
 );
 
 
+
 }
 catch(error){
 
@@ -229,13 +248,18 @@ throw new Error(
 
 
 
+
+
+// Paiement réussi
+
 if(
 event.type === "checkout.session.completed"
 ){
 
 
+
 const session =
-event.data.object;
+event.data.object as Stripe.Checkout.Session;
 
 
 
@@ -272,6 +296,7 @@ name:plan
 
 
 
+
 if(!subscriptionPlan){
 
 throw new Error(
@@ -279,6 +304,7 @@ throw new Error(
 );
 
 }
+
 
 
 
@@ -299,6 +325,98 @@ subscriptionPlan.id,
 
 
 subscriptionStatus:
+"ACTIVE",
+
+
+// sauvegarde client Stripe
+
+stripeCustomerId:
+session.customer as string
+
+
+}
+
+
+});
+
+
+
+}
+
+
+
+
+
+
+
+
+
+// Abonnement annulé
+
+if(
+event.type === "customer.subscription.deleted"
+){
+
+
+
+const subscription =
+event.data.object as Stripe.Subscription;
+
+
+
+const customerId =
+subscription.customer as string;
+
+
+
+
+
+const user =
+await this.prisma.user.findFirst({
+
+where:{
+stripeCustomerId:customerId
+}
+
+});
+
+
+
+
+
+if(user){
+
+
+
+const freePlan =
+await this.prisma.subscriptionPlan.findUnique({
+
+where:{
+name:"FREE"
+}
+
+});
+
+
+
+
+
+
+await this.prisma.user.update({
+
+where:{
+id:user.id
+},
+
+
+data:{
+
+
+subscriptionId:
+freePlan?.id,
+
+
+subscriptionStatus:
 "ACTIVE"
 
 
@@ -308,7 +426,14 @@ subscriptionStatus:
 });
 
 
+
 }
+
+
+
+}
+
+
 
 
 
@@ -321,5 +446,6 @@ received:true
 
 
 }
+
 
 }
