@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import api from "@/services/api";
+import api from "@/lib/api";
 
 
 type Invoice = {
