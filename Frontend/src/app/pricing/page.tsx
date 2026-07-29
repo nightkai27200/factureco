@@ -1,11 +1,99 @@
 "use client";
 
-
 import Link from "next/link";
-
+import { useState } from "react";
 
 
 export default function PricingPage(){
+
+
+const [loading, setLoading] = useState("");
+
+
+
+async function handleCheckout(plan:string){
+
+
+try {
+
+
+setLoading(plan);
+
+
+const token = localStorage.getItem("token");
+
+
+if(!token){
+
+alert("Vous devez être connecté pour continuer");
+
+return;
+
+}
+
+
+
+const response = await fetch(
+
+`${process.env.NEXT_PUBLIC_API_URL}/stripe/create-checkout`,
+
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":"application/json",
+
+"Authorization":`Bearer ${token}`
+
+},
+
+
+body:JSON.stringify({
+
+plan
+
+})
+
+}
+
+);
+
+
+
+const data = await response.json();
+
+
+
+if(data.url){
+
+window.location.href = data.url;
+
+}
+
+
+}
+
+catch(error){
+
+console.error(error);
+
+alert("Erreur lors de la création du paiement");
+
+}
+
+finally{
+
+setLoading("");
+
+}
+
+
+}
+
+
+
 
 
 const plans = [
@@ -52,6 +140,7 @@ features:[
 
 
 
+
 return (
 
 
@@ -89,6 +178,7 @@ Choisissez votre abonnement
 
 
 
+
 <p
 
 style={{
@@ -102,6 +192,7 @@ textAlign:"center"
 Commencez gratuitement puis évoluez selon vos besoins.
 
 </p>
+
 
 
 
@@ -124,7 +215,6 @@ marginTop:"50px"
 }}
 
 >
-
 
 
 {
@@ -163,6 +253,7 @@ textAlign:"center"
 
 
 
+
 <h3
 
 style={{
@@ -176,6 +267,7 @@ fontSize:"30px"
 {plan.price}
 
 </h3>
+
 
 
 
@@ -205,7 +297,6 @@ plan.features.map((feature)=>(
 
 ))
 
-
 }
 
 
@@ -213,6 +304,12 @@ plan.features.map((feature)=>(
 
 
 
+
+
+
+{
+
+plan.name === "FREE" ?
 
 
 <Link
@@ -239,11 +336,67 @@ textDecoration:"none"
 
 >
 
-Choisir {plan.name}
+Créer un compte
 
 </Link>
 
 
+
+:
+
+
+<button
+
+onClick={()=>handleCheckout(plan.name)}
+
+disabled={loading !== ""}
+
+
+style={{
+
+display:"block",
+
+width:"100%",
+
+marginTop:"30px",
+
+background:"#1e3a8a",
+
+color:"white",
+
+padding:"12px",
+
+borderRadius:"8px",
+
+border:"none",
+
+cursor:"pointer"
+
+}}
+
+>
+
+
+{
+
+loading === plan.name
+
+?
+
+"Redirection Stripe..."
+
+:
+
+`Choisir ${plan.name}`
+
+}
+
+
+</button>
+
+
+
+}
 
 
 
@@ -254,8 +407,6 @@ Choisir {plan.name}
 
 
 }
-
-
 
 
 </div>
