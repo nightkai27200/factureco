@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import api from "@/services/api";
+import api from "@/lib/api";
 import { API_URL } from "@/lib/config";
 
 

@@ -21,7 +21,7 @@ import {
   Client
 } from "@/services/client.service";
 
-import api from "@/services/api";
+import api from "@/lib/api";
 
 
 type Line = {
@@ -740,38 +740,36 @@ alert(
 
 onClick={async()=>{
 
+try {
 
-await fetch(
-
-`${API_URL}/quotes/${q.id}/convert`,
-
-{
-
-method:"POST",
-
-headers:{
-
-Authorization:
-
-`Bearer ${localStorage.getItem("token")}`
-
-}
-
-}
-
+await api.post(
+  `/quotes/${q.id}/convert`
 );
-
 
 
 alert(
-"Devis transformé en facture"
+  "Devis transformé en facture"
 );
-
 
 
 loadData();
 
 
+}
+catch(error){
+
+console.error(
+  "Erreur conversion facture",
+  error
+);
+
+
+alert(
+  "Impossible de convertir le devis"
+);
+
+
+}
 
 }}
 

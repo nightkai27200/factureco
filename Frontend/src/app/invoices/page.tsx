@@ -11,8 +11,8 @@ import ProtectedRoute
 from "@/components/ProtectedRoute";
 
 
-import api
-from "@/services/api";
+
+import api from "@/lib/api";
 
 import Link from "next/link";
 

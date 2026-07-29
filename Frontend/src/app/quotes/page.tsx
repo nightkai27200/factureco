@@ -21,7 +21,7 @@ import {
   Client
 } from "@/services/client.service";
 
-import api from "@/services/api";
+import api from "@/lib/api";
 
 
 type Line = {
