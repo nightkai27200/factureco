@@ -10,7 +10,7 @@ import api from "@/lib/api";
 type Item = {
   description: string;
   quantity: number;
-  price: number;
+  unitPrice: number;
 };
 
 
@@ -36,7 +36,7 @@ const [items,setItems] = useState<Item[]>([
   {
     description:"",
     quantity:1,
-    price:0
+    unitPrice:0
   }
 ]);
 
@@ -124,7 +124,7 @@ setItems([
 {
 description:"",
 quantity:1,
-price:0
+unitPrice:0
 }
 ]);
 
@@ -164,7 +164,7 @@ items.filter((_,i)=>i!==index)
 const totalHT =
 items.reduce(
 (total,item)=>
-total + item.quantity * item.price,
+total + item.quantity * item.unitPrice,
 0
 );
 
@@ -203,7 +203,7 @@ return;
 if(items.some(
 (item)=>
 !item.description ||
-item.price <=0
+item.unitPrice <=0
 )){
 
 alert(
@@ -455,12 +455,12 @@ type="number"
 
 placeholder="Prix"
 
-value={item.price}
+value={item.unitPrice}
 
 onChange={(e)=>
 updateItem(
 index,
-"price",
+"unitPrice",
 Number(e.target.value)
 )
 }
