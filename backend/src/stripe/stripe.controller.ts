@@ -19,34 +19,50 @@ export class StripeController {
   ) {}
 
 
+
   // Création session paiement
-  @UseGuards(JwtAuthGuard)
   @Post('create-checkout')
+  @UseGuards(JwtAuthGuard)
   createCheckout(
+
     @Body() body:any,
+
     @Req() req:any
+
   ){
 
     return this.stripeService.createCheckoutSession(
+
       body.plan,
+
       req.user.email,
-      req.user.id
+
+      req.user.id,
+
     );
 
   }
 
 
+
+
   // Webhook Stripe
   @Post('webhook')
   async webhook(
+
     @Req() req:any,
+
     @Headers('stripe-signature') signature:string
+
   ){
 
     return this.stripeService.handleWebhook(
-  req.rawBody,
-  signature
-);
+
+      req.rawBody,
+
+      signature
+
+    );
 
   }
 

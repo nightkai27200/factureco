@@ -40,6 +40,8 @@ export default function RegisterForm() {
 
 
 
+
+
   async function handleSubmit(
     e: React.FormEvent<HTMLFormElement>
   ) {
@@ -49,11 +51,130 @@ export default function RegisterForm() {
 
     try {
 
+
+      // Création du compte
+
       await api.post(
         "/users",
         form
       );
 
+
+
+
+
+      // Connexion automatique
+
+      const loginResponse =
+        await api.post<{
+          access_token:string;
+        }>(
+          "/auth/login",
+          {
+            email: form.email,
+            password: form.password,
+          }
+        );
+
+
+
+
+      const token =
+        loginResponse.data.access_token;
+
+
+
+
+      if(!token){
+
+        throw new Error(
+          "Token JWT introuvable après connexion"
+        );
+
+      }
+
+
+
+
+
+      // Sauvegarde JWT
+
+      localStorage.setItem(
+        "token",
+        token
+      );
+
+
+
+
+
+
+
+      // Si STARTER => Stripe
+
+      if(plan === "STARTER"){
+
+
+
+        const stripeResponse =
+          await api.post<{
+            url:string;
+          }>(
+
+            "/stripe/create-checkout",
+
+            {
+              plan:"STARTER",
+            },
+
+            {
+              headers:{
+                Authorization:
+                `Bearer ${token}`,
+              },
+            }
+
+          );
+
+
+
+
+
+        const checkoutUrl =
+          stripeResponse.data.url;
+
+
+
+
+
+        if(!checkoutUrl){
+
+          throw new Error(
+            "URL Stripe manquante"
+          );
+
+        }
+
+
+
+
+        window.location.href =
+          checkoutUrl;
+
+
+
+        return;
+
+      }
+
+
+
+
+
+
+
+
+      // Offre FREE
 
       alert(
         "Compte créé avec succès"
@@ -63,13 +184,27 @@ export default function RegisterForm() {
       router.push("/login");
 
 
-    } catch (err) {
 
-      console.error(err);
+
+
+    } catch(err:any) {
+
+
+      console.error(
+        "Erreur inscription :",
+        err
+      );
+
+
 
       setError(
+
+        err.response?.data?.message ||
+
         "Erreur lors de la création du compte"
+
       );
+
 
     }
 
@@ -77,37 +212,43 @@ export default function RegisterForm() {
 
 
 
+
+
+
   return (
 
     <main
       style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "40px",
+        minHeight:"100vh",
+        display:"flex",
+        justifyContent:"center",
+        alignItems:"center",
+        padding:"40px",
       }}
     >
+
 
       <form
 
         onSubmit={handleSubmit}
 
         style={{
-          width: "400px",
-          padding: "30px",
-          borderRadius: "12px",
-          border: "1px solid #ddd",
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
+          width:"400px",
+          padding:"30px",
+          borderRadius:"12px",
+          border:"1px solid #ddd",
+          display:"flex",
+          flexDirection:"column",
+          gap:"15px",
         }}
 
       >
 
+
         <h1>
           Créer un compte
         </h1>
+
 
 
         <p>
@@ -115,10 +256,19 @@ export default function RegisterForm() {
         </p>
 
 
+
+
         <p>
+
           Offre choisie :
-          <strong> {plan}</strong>
+
+          <strong>
+            {" "}{plan}
+          </strong>
+
         </p>
+
+
 
 
 
@@ -135,6 +285,8 @@ export default function RegisterForm() {
           required
 
         />
+
+
 
 
 
@@ -156,6 +308,8 @@ export default function RegisterForm() {
 
 
 
+
+
         <input
 
           name="password"
@@ -174,15 +328,21 @@ export default function RegisterForm() {
 
 
 
+
+
         {
           error && (
 
-            <p style={{ color: "red" }}>
+            <p style={{color:"red"}}>
+
               {error}
+
             </p>
 
           )
         }
+
+
 
 
 
@@ -191,6 +351,8 @@ export default function RegisterForm() {
           Créer mon compte
 
         </button>
+
+
 
 
 
@@ -209,7 +371,10 @@ export default function RegisterForm() {
         </p>
 
 
+
+
       </form>
+
 
 
     </main>

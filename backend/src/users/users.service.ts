@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { SubscriptionStatus } from '@prisma/client';
 
 
 @Injectable()
@@ -21,6 +22,8 @@ export class UsersService {
   plan?: string;
 }) {
 
+  console.log("DONNEES RECUES :", data);
+
 
 const selectedPlan =
 await this.prisma.subscriptionPlan.findUnique({
@@ -36,7 +39,7 @@ where:{
 if(!selectedPlan){
 
 throw new Error(
-"Le plan FREE n'existe pas"
+`Le plan ${data.plan || "FREE"} n'existe pas`
 );
 
 }
@@ -81,8 +84,9 @@ selectedPlan.id,
 
 
 subscriptionStatus:
-data.plan || "FREE",
-
+data.plan === "STARTER"
+  ? SubscriptionStatus.PENDING
+  : SubscriptionStatus.FREE,
 
 
 

@@ -29,6 +29,8 @@ model SubscriptionPlan {
 
   createdAt DateTime @default(now())
 
+  stripeProductId String? @unique
+
   stripePriceId String? @unique
 }
 
@@ -53,10 +55,13 @@ model User {
 
   subscriptionId String?
 
-  subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
+  subscriptionStatus SubscriptionStatus @default(FREE)
 
-  // Statut abonnement
-  subscriptionStatus String @default("FREE")
+  subscriptionStart DateTime?
+
+  subscriptionEnd DateTime?
+
+  subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
 
   // Stripe
   stripeCustomerId String? @unique
@@ -65,7 +70,8 @@ model User {
 
   createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  payments  Payment[]
 }
 
 model Client {
@@ -246,6 +252,24 @@ model Company {
   updatedAt DateTime @updatedAt
 }
 
+model Payment {
+  id String @id @default(uuid())
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripePaymentId String @unique
+
+  amount Float
+
+  currency String @default("eur")
+
+  status String
+
+  createdAt DateTime @default(now())
+}
+
 enum QuoteStatus {
   DRAFT
 
@@ -266,4 +290,15 @@ enum InvoiceStatus {
   PAID
 
   CANCELLED
+}
+
+// Statut abonnement
+enum SubscriptionStatus {
+  FREE
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+  PENDING
 }
