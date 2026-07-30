@@ -58,6 +58,10 @@ const [title,setTitle] =
 useState("");
 
 
+const [tva,setTva] =
+useState(20);
+
+
 
 const [lines,setLines] =
 useState<Line[]>([
@@ -185,8 +189,7 @@ unitPrice:0
 
 
 
-function total(){
-
+function totalHT(){
 
 return lines.reduce(
 
@@ -202,6 +205,21 @@ line.unitPrice,
 
 );
 
+}
+
+
+
+function montantTVA(){
+
+return totalHT() * (tva / 100);
+
+}
+
+
+
+function totalTTC(){
+
+return totalHT() + montantTVA();
 
 }
 
@@ -229,42 +247,32 @@ return;
 
 await createQuote({
 
-
 clientId,
-
 
 title,
 
+amount: totalTTC(),
 
-amount:total(),
+subtotal: totalHT(),
 
+vatRate: tva,
 
+vatAmount: montantTVA(),
 
 items:
 
 lines.map(line=>({
 
+description: line.description,
 
-description:
-line.description,
+quantity: line.quantity,
 
-
-quantity:
-line.quantity,
-
-
-unitPrice:
-line.unitPrice,
-
+unitPrice: line.unitPrice,
 
 total:
-line.quantity *
-line.unitPrice
-
+line.quantity * line.unitPrice
 
 }))
-
-
 
 });
 
@@ -398,6 +406,37 @@ e.target.value
 }
 
 />
+
+
+
+<label>
+  TVA :
+</label>
+
+<select
+  value={tva}
+  onChange={
+    e=>setTva(Number(e.target.value))
+  }
+>
+
+<option value={0}>
+  0 %
+</option>
+
+<option value={5.5}>
+  5.5 %
+</option>
+
+<option value={10}>
+  10 %
+</option>
+
+<option value={20}>
+  20 %
+</option>
+
+</select>
 
 
 
@@ -548,7 +587,7 @@ Ajouter une ligne
 
 Total :
 
-{total().toFixed(2)} €
+{totalTTC().toFixed(2)} €
 
 </h3>
 

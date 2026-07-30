@@ -589,6 +589,8 @@ y += 25;
 
 // TOTALS TVA
 
+// TOTALS TVA
+
 doc.moveDown(3);
 
 
@@ -596,16 +598,29 @@ doc
 .fontSize(12)
 .fillColor('black')
 .text(
-`Total HT : ${quote.subtotal?.toFixed(2) || "0.00"} €`,
+`Total HT : ${(quote.amountHT || 0).toFixed(2)} €`,
 {
 align:"right"
 }
 );
 
 
+doc.text(
+`TVA ${quote.tva || 0}% : ${(quote.amountTVA || 0).toFixed(2)} €`,
+{
+align:"right"
+}
+);
+
+
+doc.moveDown();
+
+
 doc
+.fontSize(16)
+.fillColor(primary)
 .text(
-`TVA ${quote.vatRate || 0}% : ${quote.vatAmount?.toFixed(2) || "0.00"} €`,
+`TOTAL TTC : ${quote.amount.toFixed(2)} €`,
 {
 align:"right"
 }

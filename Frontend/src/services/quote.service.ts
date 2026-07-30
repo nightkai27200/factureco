@@ -11,6 +11,12 @@ export type Quote = {
 
   amount:number;
 
+  amountHT:number;
+
+  tva:number;
+
+  amountTVA:number;
+
   client?:{
     name:string;
   };
