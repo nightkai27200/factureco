@@ -13,6 +13,7 @@ async function bootstrap() {
     "https://factureco.vercel.app",
     "https://factureco-e24f74xd7-ms-consulting.vercel.app",
     "https://factureco-ldcvitf5s-ms-consulting.vercel.app",
+    "https://factureco-lrfjve9o3-ms-consulting.vercel.app",
     "http://localhost:3000",
     "http://localhost:3001",
   ],
