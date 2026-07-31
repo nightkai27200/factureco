@@ -94,6 +94,17 @@ export default function Sidebar() {
         >
           Société
         </Link>
+
+
+        <Link
+  href="/profile"
+  style={{ color: "white" }}
+>
+  Mon profil
+</Link>
+
+
+
       </nav>
 
       <button
