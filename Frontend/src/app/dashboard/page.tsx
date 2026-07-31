@@ -45,66 +45,82 @@ export default function Dashboard() {
   // Gestion abonnement Stripe
   // ==========================================
 
-  const handleManageSubscription = async () => {
 
-    try {
+const handleManageSubscription = async () => {
+  try {
+    setPortalLoading(true);
 
-      setPortalLoading(true);
+    console.log(
+      "ABONNEMENT ACTUEL =",
+      subscription
+    );
 
-      // ========================================
-      // FREE -> Stripe Checkout -> STARTER
-      // ========================================
+    // ========================================
+    // FREE → Stripe Checkout STARTER
+    // ========================================
 
-      if (subscription === "FREE") {
-
-        const data =
-          await createCheckout("STARTER");
-
-        if (!data.url) {
-          throw new Error(
-            "URL Checkout Stripe manquante"
-          );
-        }
-
-        window.location.href =
-          data.url;
-
-        return;
-      }
-
-      // ========================================
-      // STARTER / PREMIUM -> Customer Portal
-      // ========================================
+    if (subscription === "FREE") {
+      console.log(
+        "FREE → Stripe Checkout STARTER"
+      );
 
       const data =
-        await createPortalSession();
+        await createCheckout("STARTER");
+
+      console.log(
+        "CHECKOUT STRIPE =",
+        data
+      );
 
       if (!data.url) {
         throw new Error(
-          "URL du portail Stripe manquante"
+          "URL Checkout Stripe manquante"
         );
       }
 
-      window.location.href =
-        data.url;
+      window.location.href = data.url;
 
-    } catch (error) {
-
-      console.error(
-        "Erreur gestion abonnement Stripe :",
-        error
-      );
-
-      alert(
-        "Impossible de gérer votre abonnement pour le moment."
-      );
-
-    } finally {
-
-      setPortalLoading(false);
-
+      return;
     }
-  };
+
+    // ========================================
+    // STARTER / PRO → Customer Portal
+    // ========================================
+
+    console.log(
+      "→ Ouverture du portail Stripe"
+    );
+
+    const data =
+      await createPortalSession();
+
+    if (!data.url) {
+      throw new Error(
+        "URL du portail Stripe manquante"
+      );
+    }
+
+    window.location.href = data.url;
+
+  } catch (error: any) {
+
+    console.error(
+      "Erreur Stripe :",
+      error?.response?.data || error
+    );
+
+    alert(
+      "Impossible d'ouvrir Stripe."
+    );
+
+  } finally {
+
+    setPortalLoading(false);
+
+  }
+};
+
+
 
   // ==========================================
   // Chargement Dashboard
@@ -134,6 +150,14 @@ export default function Dashboard() {
     plan?: string;
     subscription?: string;
   }>("/subscription/me");
+
+
+console.log(
+  "REPONSE /subscription/me =",
+  subscriptionResponse.data
+);
+
+
 
 const currentSubscription =
   subscriptionResponse.data.plan ||
