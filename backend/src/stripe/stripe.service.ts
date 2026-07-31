@@ -26,6 +26,10 @@ export class StripeService {
     });
   }
 
+  // ==========================================
+  // Stripe Customer Portal
+  // ==========================================
+
   async createPortalSession(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: {
@@ -60,6 +64,10 @@ export class StripeService {
       url: session.url,
     };
   }
+
+  // ==========================================
+  // Création Checkout Stripe
+  // ==========================================
 
   async createCheckoutSession(
     plan: string,
@@ -114,6 +122,10 @@ export class StripeService {
     };
   }
 
+  // ==========================================
+  // Webhook Stripe
+  // ==========================================
+
   async handleWebhook(
     payload: any,
     signature: string,
@@ -144,17 +156,17 @@ export class StripeService {
       );
     }
 
-    // ===========================
+    // ==========================================
     // Paiement réussi
-    // ===========================
+    // ==========================================
 
     if (
-      event.type === 'checkout.session.completed'
+      event.type ===
+      'checkout.session.completed'
     ) {
       const session =
         event.data.object as Stripe.Checkout.Session;
 
-      // LOGS TEMPORAIRES POUR DIAGNOSTIC
       console.log(
         '========== STRIPE WEBHOOK ==========',
       );
@@ -200,6 +212,20 @@ export class StripeService {
         );
       }
 
+      // Vérifier que Stripe a bien créé le Customer
+      if (!session.customer) {
+        throw new Error(
+          'Customer Stripe manquant dans la session Checkout',
+        );
+      }
+
+      // Vérifier que Stripe a bien créé l'abonnement
+      if (!session.subscription) {
+        throw new Error(
+          'Subscription Stripe manquante dans la session Checkout',
+        );
+      }
+
       const subscriptionPlan =
         await this.prisma.subscriptionPlan.findUnique({
           where: {
@@ -213,6 +239,7 @@ export class StripeService {
         );
       }
 
+      // Mise à jour de l'utilisateur
       await this.prisma.user.update({
         where: {
           id: userId,
@@ -234,14 +261,32 @@ export class StripeService {
       });
 
       console.log(
-        'UTILISATEUR MIS À JOUR :',
+        '========== UTILISATEUR MIS À JOUR ==========',
+      );
+
+      console.log(
+        'USER ID :',
         userId,
+      );
+
+      console.log(
+        'STRIPE CUSTOMER ID :',
+        session.customer,
+      );
+
+      console.log(
+        'STRIPE SUBSCRIPTION ID :',
+        session.subscription,
+      );
+
+      console.log(
+        '============================================',
       );
     }
 
-    // ===========================
+    // ==========================================
     // Abonnement supprimé
-    // ===========================
+    // ==========================================
 
     if (
       event.type ===
@@ -285,6 +330,11 @@ export class StripeService {
                 null,
             },
           });
+
+          console.log(
+            'Abonnement supprimé pour :',
+            user.id,
+          );
         }
       }
     }
@@ -294,4 +344,3 @@ export class StripeService {
     };
   }
 }
-
