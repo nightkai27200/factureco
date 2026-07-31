@@ -66,31 +66,22 @@ export async function login(
 
 
   const response =
- await api.post<LoginResponse>(
-
-      `${API_URL}/auth/login`,
-
-      {
-        email,
-        password,
-      }
-
-    );
-
-
-
-  const token =
-    response.data.access_token;
-
-
-
-  localStorage.setItem(
-
-    "token",
-
-    token
-
+  await api.post<LoginResponse>(
+    `${API_URL}/auth/login`,
+    {
+      email,
+      password,
+    }
   );
+
+console.log("LOGIN RESPONSE :", response.data);
+
+const token =
+  response.data.access_token;
+
+console.log("TOKEN :", token);
+
+localStorage.setItem("token", token);
 
 
 
