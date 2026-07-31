@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Post,
@@ -10,60 +11,54 @@ import {
 import { StripeService } from './stripe.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-
 @Controller('stripe')
 export class StripeController {
 
   constructor(
-    private stripeService: StripeService
+    private stripeService: StripeService,
   ) {}
 
-
-
+  // ==========================================
   // Création session paiement
+  // ==========================================
   @Post('create-checkout')
   @UseGuards(JwtAuthGuard)
   createCheckout(
-
-    @Body() body:any,
-
-    @Req() req:any
-
-  ){
-
+    @Body() body: any,
+    @Req() req: any,
+  ) {
     return this.stripeService.createCheckoutSession(
-
       body.plan,
-
       req.user.email,
-
       req.user.id,
-
     );
-
   }
 
+  // ==========================================
+  // Création session Customer Portal
+  // ==========================================
+  @Post('create-portal-session')
+  @UseGuards(JwtAuthGuard)
+  createPortalSession(
+    @Req() req: any,
+  ) {
+    return this.stripeService.createPortalSession(
+      req.user.id,
+    );
+  }
 
-
-
+  // ==========================================
   // Webhook Stripe
+  // ==========================================
   @Post('webhook')
   async webhook(
-
-    @Req() req:any,
-
-    @Headers('stripe-signature') signature:string
-
-  ){
-
+    @Req() req: any,
+    @Headers('stripe-signature') signature: string,
+  ) {
     return this.stripeService.handleWebhook(
-
       req.rawBody,
-
-      signature
-
+      signature,
     );
-
   }
-
 }
+

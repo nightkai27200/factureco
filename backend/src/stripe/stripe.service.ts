@@ -30,6 +30,45 @@ export class StripeService {
     );
   }
 
+
+async createPortalSession(userId: string) {
+
+  const user = await this.prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      stripeCustomerId: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error('Utilisateur introuvable');
+  }
+
+  if (!user.stripeCustomerId) {
+    throw new Error(
+      "Cet utilisateur n'a pas encore de client Stripe",
+    );
+  }
+
+  const frontendUrl =
+    this.config.get<string>('FRONTEND_URL') ??
+    'https://factureco.vercel.app';
+
+  const session =
+    await this.stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${frontendUrl}/account`,
+    });
+
+  return {
+    url: session.url,
+  };
+}
+
+
+
   async createCheckoutSession(
     plan: string,
     email: string,
@@ -88,6 +127,12 @@ export class StripeService {
     };
 
   }
+
+
+  
+
+
+
 
   async handleWebhook(
     payload: any,
