@@ -41,85 +41,115 @@ export default function Dashboard() {
   const [subscription, setSubscription] =
     useState("FREE");
 
+
   // ==========================================
   // Gestion abonnement Stripe
   // ==========================================
 
+  const handleManageSubscription = async () => {
 
-const handleManageSubscription = async () => {
-  try {
-    setPortalLoading(true);
+    try {
 
-    console.log(
-      "ABONNEMENT ACTUEL =",
-      subscription
-    );
-
-    // ========================================
-    // FREE → Stripe Checkout STARTER
-    // ========================================
-
-    if (subscription === "FREE") {
-      console.log(
-        "FREE → Stripe Checkout STARTER"
-      );
-
-      const data =
-        await createCheckout("STARTER");
+      setPortalLoading(true);
 
       console.log(
-        "CHECKOUT STRIPE =",
-        data
+        "ABONNEMENT ACTUEL =",
+        subscription
       );
 
-      if (!data.url) {
-        throw new Error(
-          "URL Checkout Stripe manquante"
+
+      // ========================================
+      // FREE / PENDING → Checkout STARTER
+      // ========================================
+
+      if (
+        subscription === "FREE" ||
+        subscription === "PENDING"
+      ) {
+
+        console.log(
+          "➡️ Création Checkout STARTER"
         );
+
+
+        const data =
+          await createCheckout("STARTER");
+
+
+        console.log(
+          "CHECKOUT STRIPE =",
+          data
+        );
+
+
+        if (!data.url) {
+
+          throw new Error(
+            "URL Checkout Stripe manquante"
+          );
+
+        }
+
+
+        // Redirection vers Stripe
+
+        window.location.href =
+          data.url;
+
+
+        return;
+
       }
 
-      window.location.href = data.url;
 
-      return;
-    }
+      // ========================================
+      // STARTER / PRO → Customer Portal
+      // ========================================
 
-    // ========================================
-    // STARTER / PRO → Customer Portal
-    // ========================================
-
-    console.log(
-      "→ Ouverture du portail Stripe"
-    );
-
-    const data =
-      await createPortalSession();
-
-    if (!data.url) {
-      throw new Error(
-        "URL du portail Stripe manquante"
+      console.log(
+        "➡️ Ouverture du portail Stripe"
       );
+
+
+      const data =
+        await createPortalSession();
+
+
+      if (!data.url) {
+
+        throw new Error(
+          "URL du portail Stripe manquante"
+        );
+
+      }
+
+
+      window.location.href =
+        data.url;
+
+
+    } catch (error: any) {
+
+
+      console.error(
+        "Erreur Stripe :",
+        error?.response?.data ||
+        error
+      );
+
+
+      alert(
+        "Impossible d'ouvrir Stripe."
+      );
+
+
+    } finally {
+
+      setPortalLoading(false);
+
     }
 
-    window.location.href = data.url;
-
-  } catch (error: any) {
-
-    console.error(
-      "Erreur Stripe :",
-      error?.response?.data || error
-    );
-
-    alert(
-      "Impossible d'ouvrir Stripe."
-    );
-
-  } finally {
-
-    setPortalLoading(false);
-
-  }
-};
-
+  };
 
 
   // ==========================================
@@ -128,9 +158,11 @@ const handleManageSubscription = async () => {
 
   useEffect(() => {
 
+
     async function loadDashboard() {
 
       try {
+
 
         // ======================================
         // Statistiques
@@ -139,52 +171,73 @@ const handleManageSubscription = async () => {
         const data =
           await getStats();
 
+
         setStats(data);
+
 
         // ======================================
         // Abonnement utilisateur
         // ======================================
 
         const subscriptionResponse =
-  await api.get<{
-    plan?: string;
-    subscription?: string;
-  }>("/subscription/me");
+          await api.get<{
+            plan?: string;
+            subscription?: string;
+          }>("/subscription/me");
 
 
-console.log(
-  "REPONSE /subscription/me =",
-  subscriptionResponse.data
-);
-
-
-
-const currentSubscription =
-  subscriptionResponse.data.plan ||
-  subscriptionResponse.data.subscription ||
-  "FREE";
-
-        setSubscription(
-          String(currentSubscription).toUpperCase()
+        console.log(
+          "REPONSE /subscription/me =",
+          subscriptionResponse.data
         );
 
+
+        const currentSubscription =
+          subscriptionResponse.data.plan ||
+          subscriptionResponse.data.subscription ||
+          "FREE";
+
+
+        const normalizedSubscription =
+          String(
+            currentSubscription
+          ).toUpperCase();
+
+
+        console.log(
+          "ABONNEMENT NORMALISE =",
+          normalizedSubscription
+        );
+
+
+        setSubscription(
+          normalizedSubscription
+        );
+
+
       } catch (error) {
+
 
         console.error(
           "Erreur chargement dashboard :",
           error
         );
 
+
       } finally {
 
         setLoading(false);
 
       }
+
     }
+
 
     loadDashboard();
 
+
   }, []);
+
 
   return (
 
@@ -202,15 +255,20 @@ const currentSubscription =
           Tableau de bord
         </h1>
 
+
         {loading && (
+
           <p>
             Chargement...
           </p>
+
         )}
+
 
         {!loading && stats && (
 
           <div>
+
 
             {/* ==================================
                 Statistiques
@@ -233,12 +291,14 @@ const currentSubscription =
                 }
               />
 
+
               <Card
                 title="Chiffre d'affaires TTC"
                 value={
                   `${stats.revenueTTC.toFixed(2)} €`
                 }
               />
+
 
               <Card
                 title="Factures en attente"
@@ -248,6 +308,7 @@ const currentSubscription =
                   )
                 }
               />
+
 
               <Card
                 title="Clients"
@@ -259,6 +320,7 @@ const currentSubscription =
               />
 
             </div>
+
 
             {/* ==================================
                 Devis acceptés
@@ -277,16 +339,20 @@ const currentSubscription =
                 Devis acceptés
               </h2>
 
+
               <p
                 style={{
                   fontSize: "32px",
                   fontWeight: "bold"
                 }}
               >
+
                 {stats.acceptedQuotes}
+
               </p>
 
             </div>
+
 
             {/* ==================================
                 Gestion abonnement
@@ -305,17 +371,6 @@ const currentSubscription =
                 Abonnement
               </h2>
 
-              <p
-                style={{
-                  color: "#666",
-                  marginTop: "8px"
-                }}
-              >
-                Abonnement actuel :{" "}
-                <strong>
-                  {subscription}
-                </strong>
-              </p>
 
               <p
                 style={{
@@ -323,11 +378,33 @@ const currentSubscription =
                   marginTop: "8px"
                 }}
               >
-                {subscription === "FREE"
+
+                Abonnement actuel :{" "}
+
+                <strong>
+                  {subscription}
+                </strong>
+
+              </p>
+
+
+              <p
+                style={{
+                  color: "#666",
+                  marginTop: "8px"
+                }}
+              >
+
+                {subscription === "FREE" ||
+                subscription === "PENDING"
+
                   ? "Passez à STARTER pour débloquer les fonctionnalités supplémentaires."
+
                   : "Gérez votre abonnement, votre moyen de paiement et votre facturation."
                 }
+
               </p>
+
 
               <button
                 type="button"
@@ -356,15 +433,23 @@ const currentSubscription =
               >
 
                 {portalLoading
+
                   ? "Ouverture..."
-                  : subscription === "FREE"
+
+                  : subscription === "FREE" ||
+                    subscription === "PENDING"
+
                     ? "Passer à STARTER"
+
                     : "Gérer mon abonnement"
+
                 }
 
               </button>
 
+
             </div>
+
 
           </div>
 
@@ -375,6 +460,7 @@ const currentSubscription =
     </ProtectedRoute>
 
   );
+
 }
 
 
@@ -410,6 +496,7 @@ function Card({
         {title}
       </h3>
 
+
       <p
         style={{
           fontSize: "30px",
@@ -417,11 +504,14 @@ function Card({
           color: "#1e3a8a"
         }}
       >
+
         {value}
+
       </p>
 
     </div>
 
   );
+
 }
 
