@@ -114,8 +114,10 @@ name:"STARTER",
 price:"9,99 €/mois",
 features:[
 "Clients illimités",
-"Factures PDF",
-"Logo entreprise",
+"Devis illimités",
+"Factures PDF professionnelles",
+"Logo de votre entreprise",
+"Suivi des paiements",
 "Support"
 ]
 },
@@ -236,15 +238,45 @@ padding:"30px",
 
 borderRadius:"15px",
 
-boxShadow:"0 5px 15px #ddd",
+boxShadow:
+plan.name === "STARTER"
+  ? "0 8px 25px rgba(30,58,138,0.25)"
+  : "0 5px 15px #ddd",
 
-textAlign:"center"
+textAlign:"center",
+
+border:
+plan.name === "STARTER"
+  ? "2px solid #1e3a8a"
+  : "1px solid #eee",
+
+position:"relative"
 
 }}
 
 >
 
+{plan.name === "STARTER" && (
 
+<div
+style={{
+position:"absolute",
+top:"-15px",
+left:"50%",
+transform:"translateX(-50%)",
+background:"#1e3a8a",
+color:"white",
+padding:"6px 18px",
+borderRadius:"20px",
+fontSize:"13px",
+fontWeight:"bold",
+whiteSpace:"nowrap"
+}}
+>
+LE PLUS POPULAIRE
+</div>
+
+)}
 
 <h2>
 {plan.name}
@@ -267,6 +299,22 @@ fontSize:"30px"
 {plan.price}
 
 </h3>
+
+
+{plan.name === "STARTER" && (
+
+<p
+style={{
+fontSize:"14px",
+color:"#555",
+marginTop:"-15px",
+marginBottom:"20px"
+}}
+>
+Pour les entrepreneurs qui veulent gagner du temps
+</p>
+
+)}
 
 
 
@@ -387,7 +435,11 @@ loading === plan.name
 
 :
 
-`Choisir ${plan.name}`
+plan.name === "STARTER"
+
+? "Passer à STARTER"
+
+: `Choisir ${plan.name}`
 
 }
 

@@ -61,20 +61,46 @@ useEffect(()=>{
 
 async function addClient(){
 
+  try {
 
- await createClient({
+    await createClient({
+      name,
+      email
+    });
 
-  name,
-  email
+    setName("");
+    setEmail("");
 
- });
+    await loadClients();
 
+  } catch (error: any) {
 
- setName("");
- setEmail("");
+    console.error(
+      "Erreur création client :",
+      error
+    );
 
- loadClients();
+    const message =
+      error?.response?.data?.message;
 
+    if (
+      error?.response?.status === 403 &&
+      message?.includes("Limite atteinte")
+    ) {
+
+      alert(
+        "Vous avez atteint la limite de 5 clients avec votre abonnement FREE.\n\nPassez à STARTER pour avoir des clients illimités."
+      );
+
+      return;
+    }
+
+    alert(
+      message ||
+      "Impossible de créer le client."
+    );
+
+  }
 
 }
 
