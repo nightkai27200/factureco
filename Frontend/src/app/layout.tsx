@@ -1,43 +1,38 @@
-import "./globals.css";
 
+import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 
 import Sidebar from "@/components/Sidebar";
 
-
 export default function RootLayout({
-children
-}:{
-children:React.ReactNode
-}){
+  children
+}: {
+  children: React.ReactNode
+}) {
 
+  return (
 
-return (
+    <html lang="fr">
 
-<html lang="fr">
+      <body>
 
+        <Sidebar />
 
-<body>
+        <main
+          style={{
+            marginLeft: "240px"
+          }}
+        >
+          {children}
+        </main>
 
+        <Analytics />
 
-<Sidebar />
+      </body>
 
+    </html>
 
-<main
-style={{
-marginLeft:"240px"
-}}
->
-
-{children}
-
-</main>
-
-
-</body>
-
-
-</html>
-
-);
+  );
 
 }
+
