@@ -3,13 +3,13 @@
 
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 import {
-  getStats
+  getStats,
 } from "../../services/dashboard.service";
 
 import api from "@/lib/api";
@@ -25,6 +25,18 @@ type Stats = {
   pendingInvoices: number;
   acceptedQuotes: number;
   clients: number;
+};
+
+type SubscriptionResponse = {
+  plan?: string | {
+    name?: string;
+  } | null;
+
+  subscription?: string | {
+    name?: string;
+  } | null;
+
+  subscriptionStatus?: string | null;
 };
 
 export default function Dashboard() {
@@ -43,106 +55,167 @@ export default function Dashboard() {
 
 
   // ==========================================
+  // Récupérer proprement le nom du plan
+  // ==========================================
+
+  function getPlanName(
+    data: SubscriptionResponse
+  ): string {
+
+    const value =
+      data.plan ??
+      data.subscription ??
+      "FREE";
+
+
+    // Si le backend renvoie directement :
+    // "FREE", "STARTER", "PRO"
+
+    if (typeof value === "string") {
+
+      return value.toUpperCase();
+
+    }
+
+
+    // Si le backend renvoie :
+    // { name: "FREE" }
+
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      typeof value.name === "string"
+    ) {
+
+      return value.name.toUpperCase();
+
+    }
+
+
+    return "FREE";
+  }
+
+
+
+  // ==========================================
   // Gestion abonnement Stripe
   // ==========================================
 
-  const handleManageSubscription = async () => {
+  const handleManageSubscription =
+    async () => {
 
-    try {
+      try {
 
-      setPortalLoading(true);
+        setPortalLoading(true);
 
-      console.log(
-        "ABONNEMENT ACTUEL =",
-        subscription
-      );
-
-
-      // ========================================
-      // FREE / PENDING → Checkout STARTER
-      // ========================================
-
-      if (
-        subscription === "FREE" ||
-        subscription === "PENDING"
-      ) {
 
         console.log(
-          "FREE/PENDING → Création Checkout STARTER"
+          "PLAN ACTUEL =",
+          subscription
         );
+
+
+        // ======================================
+        // FREE
+        // → Stripe Checkout
+        // → STARTER
+        // ======================================
+
+        if (subscription === "FREE") {
+
+          console.log(
+            "FREE → CHECKOUT STARTER"
+          );
+
+
+          const data =
+            await createCheckout(
+              "STARTER"
+            );
+
+
+          console.log(
+            "REPONSE CHECKOUT =",
+            data
+          );
+
+
+          if (!data?.url) {
+
+            throw new Error(
+              "URL Checkout Stripe manquante"
+            );
+
+          }
+
+
+          window.location.href =
+            data.url;
+
+
+          return;
+        }
+
+
+        // ======================================
+        // STARTER / PRO
+        // → Customer Portal
+        // ======================================
+
+        console.log(
+          "ABONNEMENT PAYANT → PORTAIL STRIPE"
+        );
+
 
         const data =
-          await createCheckout("STARTER");
+          await createPortalSession();
+
 
         console.log(
-          "CHECKOUT STRIPE =",
+          "REPONSE PORTAIL =",
           data
         );
+
 
         if (!data?.url) {
 
           throw new Error(
-            "URL Checkout Stripe manquante"
+            "URL du portail Stripe manquante"
           );
 
         }
 
-        // Redirection vers Stripe Checkout
 
         window.location.href =
           data.url;
 
-        return;
       }
 
+      catch (error: any) {
 
-      // ========================================
-      // STARTER / PRO → Customer Portal
-      // ========================================
+        console.error(
+          "Erreur Stripe :",
+          error?.response?.data ||
+          error
+        );
 
-      console.log(
-        "STARTER/PRO → Ouverture portail Stripe"
-      );
 
-      const data =
-        await createPortalSession();
-
-      console.log(
-        "PORTAIL STRIPE =",
-        data
-      );
-
-      if (!data?.url) {
-
-        throw new Error(
-          "URL du portail Stripe manquante"
+        alert(
+          error?.response?.data?.message ||
+          error?.message ||
+          "Impossible d'ouvrir Stripe."
         );
 
       }
 
-      window.location.href =
-        data.url;
+      finally {
 
+        setPortalLoading(false);
 
-    } catch (error: any) {
+      }
 
-      console.error(
-        "Erreur Stripe :",
-        error?.response?.data ||
-        error
-      );
+    };
 
-      alert(
-        "Impossible d'ouvrir Stripe."
-      );
-
-    } finally {
-
-      setPortalLoading(false);
-
-    }
-
-  };
 
 
   // ==========================================
@@ -155,108 +228,77 @@ export default function Dashboard() {
 
       try {
 
+
         // ======================================
         // Statistiques
         // ======================================
 
-        const data =
+        const statsData =
           await getStats();
 
-        setStats(data);
+
+        setStats(
+          statsData
+        );
 
 
         // ======================================
-        // Abonnement utilisateur
+        // Abonnement
         // ======================================
 
-        const subscriptionResponse =
-          await api.get<{
-            plan?: any;
-            subscription?: any;
-          }>("/subscription/me");
+        const response =
+          await api.get<SubscriptionResponse>(
+            "/subscription/me"
+          );
 
 
         console.log(
           "REPONSE /subscription/me =",
-          subscriptionResponse.data
+          response.data
         );
 
 
-        // ======================================
-        // Récupération de l'abonnement
-        // ======================================
-
-        const currentSubscription =
-          subscriptionResponse.data.plan ??
-          subscriptionResponse.data.subscription ??
-          "FREE";
+        const currentPlan =
+          getPlanName(
+            response.data
+          );
 
 
         console.log(
-          "ABONNEMENT BRUT =",
-          currentSubscription
-        );
-
-
-        let subscriptionName = "FREE";
-
-
-        // Si l'API retourne directement "FREE"
-
-        if (
-          typeof currentSubscription === "string"
-        ) {
-
-          subscriptionName =
-            currentSubscription.toUpperCase();
-
-        }
-
-
-        // Si l'API retourne un objet
-
-        else if (
-          typeof currentSubscription === "object" &&
-          currentSubscription !== null
-        ) {
-
-          const sub =
-            currentSubscription as any;
-
-
-          subscriptionName =
-            String(
-              sub.name ||
-              sub.plan ||
-              sub.code ||
-              sub.subscription ||
-              "FREE"
-            ).toUpperCase();
-
-        }
-
-
-        console.log(
-          "ABONNEMENT NORMALISÉ =",
-          subscriptionName
+          "PLAN FINAL =",
+          currentPlan
         );
 
 
         setSubscription(
-          subscriptionName
+          currentPlan
         );
 
+      }
 
-      } catch (error) {
+      catch (error) {
 
         console.error(
           "Erreur chargement dashboard :",
           error
         );
 
-      } finally {
 
-        setLoading(false);
+        // Par sécurité :
+        // si impossible de récupérer
+        // l'abonnement, on considère FREE
+
+        setSubscription(
+          "FREE"
+        );
+
+      }
+
+      finally {
+
+        setLoading(
+          false
+        );
 
       }
 
@@ -268,6 +310,7 @@ export default function Dashboard() {
   }, []);
 
 
+
   return (
 
     <ProtectedRoute>
@@ -276,7 +319,7 @@ export default function Dashboard() {
         style={{
           padding: "40px",
           background: "#f5f7fb",
-          minHeight: "100vh"
+          minHeight: "100vh",
         }}
       >
 
@@ -300,7 +343,7 @@ export default function Dashboard() {
 
 
             {/* ==================================
-                Statistiques
+                STATISTIQUES
             ================================== */}
 
             <div
@@ -309,7 +352,7 @@ export default function Dashboard() {
                 gridTemplateColumns:
                   "repeat(auto-fit,minmax(220px,1fr))",
                 gap: "20px",
-                marginTop: "30px"
+                marginTop: "30px",
               }}
             >
 
@@ -351,8 +394,9 @@ export default function Dashboard() {
             </div>
 
 
+
             {/* ==================================
-                Devis acceptés
+                DEVIS ACCEPTÉS
             ================================== */}
 
             <div
@@ -360,7 +404,7 @@ export default function Dashboard() {
                 marginTop: "30px",
                 background: "#fff",
                 padding: "25px",
-                borderRadius: "10px"
+                borderRadius: "10px",
               }}
             >
 
@@ -372,19 +416,18 @@ export default function Dashboard() {
               <p
                 style={{
                   fontSize: "32px",
-                  fontWeight: "bold"
+                  fontWeight: "bold",
                 }}
               >
-
                 {stats.acceptedQuotes}
-
               </p>
 
             </div>
 
 
+
             {/* ==================================
-                Gestion abonnement
+                ABONNEMENT
             ================================== */}
 
             <div
@@ -392,7 +435,7 @@ export default function Dashboard() {
                 marginTop: "30px",
                 background: "#fff",
                 padding: "25px",
-                borderRadius: "10px"
+                borderRadius: "10px",
               }}
             >
 
@@ -404,7 +447,7 @@ export default function Dashboard() {
               <p
                 style={{
                   color: "#666",
-                  marginTop: "8px"
+                  marginTop: "8px",
                 }}
               >
 
@@ -420,17 +463,16 @@ export default function Dashboard() {
               <p
                 style={{
                   color: "#666",
-                  marginTop: "8px"
+                  marginTop: "8px",
                 }}
               >
 
-                {
-                  subscription === "FREE" ||
-                  subscription === "PENDING"
+                {subscription === "FREE"
 
-                    ? "Passez à STARTER pour débloquer les fonctionnalités supplémentaires."
+                  ? "Passez à STARTER pour débloquer les fonctionnalités supplémentaires."
 
-                    : "Gérez votre abonnement, votre moyen de paiement et votre facturation."
+                  : "Gérez votre abonnement, votre moyen de paiement et votre facturation."
+
                 }
 
               </p>
@@ -458,28 +500,25 @@ export default function Dashboard() {
                     portalLoading
                       ? "not-allowed"
                       : "pointer",
-                  fontSize: "16px"
+                  fontSize: "16px",
                 }}
               >
 
-                {
-                  portalLoading
+                {portalLoading
 
-                    ? "Ouverture..."
+                  ? "Ouverture..."
 
-                    : subscription === "FREE" ||
-                      subscription === "PENDING"
+                  : subscription === "FREE"
 
-                      ? "Passer à STARTER"
+                    ? "Passer à STARTER"
 
-                      : "Gérer mon abonnement"
+                    : "Gérer mon abonnement"
+
                 }
 
               </button>
 
-
             </div>
-
 
           </div>
 
@@ -494,14 +533,15 @@ export default function Dashboard() {
 }
 
 
+
 // ==========================================
-// Carte statistique
+// CARTE STATISTIQUE
 // ==========================================
 
 function Card({
 
   title,
-  value
+  value,
 
 }: {
 
@@ -518,7 +558,7 @@ function Card({
         padding: "25px",
         borderRadius: "12px",
         boxShadow:
-          "0 2px 8px rgba(0,0,0,0.08)"
+          "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
 
@@ -531,12 +571,10 @@ function Card({
         style={{
           fontSize: "30px",
           fontWeight: "bold",
-          color: "#1e3a8a"
+          color: "#1e3a8a",
         }}
       >
-
         {value}
-
       </p>
 
     </div>
