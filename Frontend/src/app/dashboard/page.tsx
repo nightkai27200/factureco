@@ -68,21 +68,18 @@ export default function Dashboard() {
       ) {
 
         console.log(
-          "➡️ Création Checkout STARTER"
+          "FREE/PENDING → Création Checkout STARTER"
         );
-
 
         const data =
           await createCheckout("STARTER");
-
 
         console.log(
           "CHECKOUT STRIPE =",
           data
         );
 
-
-        if (!data.url) {
+        if (!data?.url) {
 
           throw new Error(
             "URL Checkout Stripe manquante"
@@ -90,15 +87,12 @@ export default function Dashboard() {
 
         }
 
-
-        // Redirection vers Stripe
+        // Redirection vers Stripe Checkout
 
         window.location.href =
           data.url;
 
-
         return;
-
       }
 
 
@@ -107,15 +101,18 @@ export default function Dashboard() {
       // ========================================
 
       console.log(
-        "➡️ Ouverture du portail Stripe"
+        "STARTER/PRO → Ouverture portail Stripe"
       );
-
 
       const data =
         await createPortalSession();
 
+      console.log(
+        "PORTAIL STRIPE =",
+        data
+      );
 
-      if (!data.url) {
+      if (!data?.url) {
 
         throw new Error(
           "URL du portail Stripe manquante"
@@ -123,13 +120,11 @@ export default function Dashboard() {
 
       }
 
-
       window.location.href =
         data.url;
 
 
     } catch (error: any) {
-
 
       console.error(
         "Erreur Stripe :",
@@ -137,11 +132,9 @@ export default function Dashboard() {
         error
       );
 
-
       alert(
         "Impossible d'ouvrir Stripe."
       );
-
 
     } finally {
 
@@ -158,11 +151,9 @@ export default function Dashboard() {
 
   useEffect(() => {
 
-
     async function loadDashboard() {
 
       try {
-
 
         // ======================================
         // Statistiques
@@ -170,7 +161,6 @@ export default function Dashboard() {
 
         const data =
           await getStats();
-
 
         setStats(data);
 
@@ -181,8 +171,8 @@ export default function Dashboard() {
 
         const subscriptionResponse =
           await api.get<{
-            plan?: string;
-            subscription?: string;
+            plan?: any;
+            subscription?: any;
           }>("/subscription/me");
 
 
@@ -192,37 +182,77 @@ export default function Dashboard() {
         );
 
 
+        // ======================================
+        // Récupération de l'abonnement
+        // ======================================
+
         const currentSubscription =
-          subscriptionResponse.data.plan ||
-          subscriptionResponse.data.subscription ||
+          subscriptionResponse.data.plan ??
+          subscriptionResponse.data.subscription ??
           "FREE";
 
 
-        const normalizedSubscription =
-          String(
-            currentSubscription
-          ).toUpperCase();
+        console.log(
+          "ABONNEMENT BRUT =",
+          currentSubscription
+        );
+
+
+        let subscriptionName = "FREE";
+
+
+        // Si l'API retourne directement "FREE"
+
+        if (
+          typeof currentSubscription === "string"
+        ) {
+
+          subscriptionName =
+            currentSubscription.toUpperCase();
+
+        }
+
+
+        // Si l'API retourne un objet
+
+        else if (
+          typeof currentSubscription === "object" &&
+          currentSubscription !== null
+        ) {
+
+          const sub =
+            currentSubscription as any;
+
+
+          subscriptionName =
+            String(
+              sub.name ||
+              sub.plan ||
+              sub.code ||
+              sub.subscription ||
+              "FREE"
+            ).toUpperCase();
+
+        }
 
 
         console.log(
-          "ABONNEMENT NORMALISE =",
-          normalizedSubscription
+          "ABONNEMENT NORMALISÉ =",
+          subscriptionName
         );
 
 
         setSubscription(
-          normalizedSubscription
+          subscriptionName
         );
 
 
       } catch (error) {
 
-
         console.error(
           "Erreur chargement dashboard :",
           error
         );
-
 
       } finally {
 
@@ -234,7 +264,6 @@ export default function Dashboard() {
 
 
     loadDashboard();
-
 
   }, []);
 
@@ -395,12 +424,13 @@ export default function Dashboard() {
                 }}
               >
 
-                {subscription === "FREE" ||
-                subscription === "PENDING"
+                {
+                  subscription === "FREE" ||
+                  subscription === "PENDING"
 
-                  ? "Passez à STARTER pour débloquer les fonctionnalités supplémentaires."
+                    ? "Passez à STARTER pour débloquer les fonctionnalités supplémentaires."
 
-                  : "Gérez votre abonnement, votre moyen de paiement et votre facturation."
+                    : "Gérez votre abonnement, votre moyen de paiement et votre facturation."
                 }
 
               </p>
@@ -432,17 +462,17 @@ export default function Dashboard() {
                 }}
               >
 
-                {portalLoading
+                {
+                  portalLoading
 
-                  ? "Ouverture..."
+                    ? "Ouverture..."
 
-                  : subscription === "FREE" ||
-                    subscription === "PENDING"
+                    : subscription === "FREE" ||
+                      subscription === "PENDING"
 
-                    ? "Passer à STARTER"
+                      ? "Passer à STARTER"
 
-                    : "Gérer mon abonnement"
-
+                      : "Gérer mon abonnement"
                 }
 
               </button>
