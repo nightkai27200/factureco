@@ -28,30 +28,18 @@ export const api = axios.create({
 /// Ajout automatique du JWT
 
 api.interceptors.request.use(
-
   (config) => {
+    const token = localStorage.getItem("token");
 
-
-    const token =
-      localStorage.getItem("token");
-
-
-    if(token){
-
+    // Ne pas envoyer l'ancien JWT lors de la connexion
+    if (token && !config.url?.includes("/auth/login")) {
       config.headers = {
-
         ...(config.headers || {}),
-
-        Authorization:
-          `Bearer ${token}`,
-
+        Authorization: `Bearer ${token}`,
       };
-
     }
 
-
     return config;
-
   },
 
 
