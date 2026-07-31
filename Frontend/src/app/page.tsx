@@ -444,9 +444,9 @@ name="FREE"
 price="0 €"
 
 features={[
-"5 clients",
-"5 devis",
-"PDF simple"
+"3 clients",
+"3 devis",
+"1 PDF simple"
 ]}
 
 />
