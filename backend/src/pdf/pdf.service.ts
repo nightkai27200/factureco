@@ -11,14 +11,25 @@ export class PdfService {
   // ============================================================
 
   private money(value: any): string {
-    const number = Number(value ?? 0);
+  const number = Number(value ?? 0);
 
-    return number.toLocaleString('fr-FR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }) + ' €';
+  if (!Number.isFinite(number)) {
+    return '0,00 €';
   }
 
+  const formatted = number
+    .toFixed(2)
+    .replace('.', ',');
+
+  const [integerPart, decimalPart] = formatted.split(',');
+
+  const integerFormatted = integerPart.replace(
+    /\B(?=(\d{3})+(?!\d))/g,
+    ' ',
+  );
+
+  return `${integerFormatted},${decimalPart} €`;
+}
   private date(value: any): string {
     if (!value) {
       return '';
