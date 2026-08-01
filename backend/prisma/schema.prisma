@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,288 +6,174 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model SubscriptionPlan {
-  id String @id @default(uuid())
-
-  name String @unique
-
-  price Float
-
-  features Json
-
-  users User[]
-
-  createdAt DateTime @default(now())
-
-  stripeProductId String? @unique
-
-  stripePriceId String? @unique
+  id              String   @id @default(uuid())
+  name            String   @unique
+  price           Float
+  features        Json
+  createdAt       DateTime @default(now())
+  stripePriceId   String?  @unique
+  stripeProductId String?  @unique
+  users           User[]
 }
 
 model User {
-  id String @id @default(uuid())
-
-  email String @unique
-
-  passwordHash String
-
-  name String?
-
-  role Role @default(USER)
-
-  clients Client[]
-
-  quotes Quote[]
-
-  invoices Invoice[]
-
-  company Company?
-
-  subscriptionId String?
-
-  subscriptionStatus SubscriptionStatus @default(FREE)
-
-  subscriptionStart DateTime?
-
-  subscriptionEnd DateTime?
-
-  subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
-
-  // Stripe
-  stripeCustomerId String? @unique
-
-  stripeSubscriptionId String? @unique
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime  @updatedAt
-  payments  Payment[]
+  id                   String             @id @default(uuid())
+  email                String             @unique
+  name                 String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  passwordHash         String
+  role                 Role               @default(USER)
+  subscriptionId       String?
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  subscriptionEnd      DateTime?
+  subscriptionStart    DateTime?
+  subscriptionStatus   SubscriptionStatus @default(FREE)
+  clients              Client[]
+  company              Company?
+  invoices             Invoice[]
+  payments             Payment[]
+  quotes               Quote[]
+  subscription         SubscriptionPlan?  @relation(fields: [subscriptionId], references: [id])
 }
 
 model Client {
-  id String @id @default(uuid())
-
-  name String
-
-  email String?
-
-  phone String?
-
-  company String?
-
-  address String?
-
-  userId String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  quotes Quote[]
-
-  invoices Invoice[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+  quotes    Quote[]
 }
 
 model DocumentCounter {
-  id String @id @default(uuid())
-
-  type String
-
-  year Int
-
-  value Int @default(0)
+  id    String @id @default(uuid())
+  type  String
+  year  Int
+  value Int    @default(0)
 
   @@unique([type, year])
 }
 
 model Quote {
-  id String @id @default(uuid())
-
-  number String
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  title String?
-
+  id          String      @id @default(uuid())
+  number      String
+  status      QuoteStatus
+  title       String?
   description String?
-
-  amount Float
-
-  subtotal Float @default(0)
-
-  vatRate Float @default(20)
-
-  vatAmount Float @default(0)
-
-  status QuoteStatus
-
-  clientId String
-
-  client Client @relation(fields: [clientId], references: [id])
-
-  userId String
-
-  user User @relation(fields: [userId], references: [id])
-
-  quoteItems QuoteItem[]
-
-  invoice Invoice? // <-- IMPORTANT
+  amount      Float
+  clientId    String
+  userId      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  subtotal    Float       @default(0)
+  vatAmount   Float       @default(0)
+  vatRate     Float       @default(20)
+  invoice     Invoice?
+  client      Client      @relation(fields: [clientId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+  quoteItems  QuoteItem[]
 }
 
 model QuoteItem {
-  id String @id @default(uuid())
-
+  id          String   @id @default(uuid())
   description String
-
-  quantity Float
-
-  unitPrice Float
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  total Float
-
-  quoteId String
-
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  quoteId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {
-  id String @id @default(uuid())
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  status InvoiceStatus
-
-  number String
-
-  amount Float
-
-  subtotal Float @default(0)
-
-  vatRate Float @default(20)
-
-  vatAmount Float @default(0)
-
-  quoteId String? @unique
-
-  quote Quote? @relation(fields: [quoteId], references: [id])
-
-  clientId String
-
-  client Client @relation(fields: [clientId], references: [id])
-
-  userId String
-
-  user User @relation(fields: [userId], references: [id])
-
+  id           String        @id @default(uuid())
+  number       String
+  status       InvoiceStatus
+  amount       Float
+  clientId     String
+  userId       String
+  quoteId      String?       @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  subtotal     Float         @default(0)
+  vatAmount    Float         @default(0)
+  vatRate      Float         @default(20)
+  client       Client        @relation(fields: [clientId], references: [id])
+  quote        Quote?        @relation(fields: [quoteId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
   invoiceItems InvoiceItem[]
 }
 
 model InvoiceItem {
-  id String @id @default(uuid())
-
+  id          String   @id @default(uuid())
   description String
-
-  quantity Float
-
-  unitPrice Float
-
-  total Float
-
-  invoiceId String
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  invoiceId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Company {
-  id String @id @default(uuid())
-
-  name String
-
-  address String?
-
-  city String?
-
-  phone String?
-
-  email String?
-
-  website String?
-
-  logo String?
-
-  siret String?
-
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  email     String?
+  phone     String?
+  siret     String?
   vatNumber String?
-
-  userId String @unique
-
-  user User @relation(fields: [userId], references: [id])
-
+  logo      String?
+  userId    String   @unique
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
+  city      String?
+  website   String?
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Payment {
-  id String @id @default(uuid())
+  id              String   @id @default(uuid())
+  userId          String
+  stripePaymentId String   @unique
+  amount          Float
+  currency        String   @default("eur")
+  status          String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  userId String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  stripePaymentId String @unique
-
-  amount Float
-
-  currency String @default("eur")
-
-  status String
-
-  createdAt DateTime @default(now())
+enum Role {
+  USER
+  ADMIN
 }
 
 enum QuoteStatus {
   DRAFT
-
   SENT
-
   ACCEPTED
-
   REFUSED
-
   CONVERTED
 }
 
 enum InvoiceStatus {
   DRAFT
-
   SENT
-
   PAID
-
   CANCELLED
 }
 
-// Statut abonnement
 enum SubscriptionStatus {
   FREE
   ACTIVE

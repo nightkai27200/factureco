@@ -74,23 +74,55 @@ export class StripeService {
     email: string,
     userId: string,
   ) {
+    // Plans autorisés
+    const allowedPlans = [
+      'FREE',
+      'FONDATEUR',
+      'STARTER',
+      'PRO',
+    ];
+
+    const normalizedPlan = plan.toUpperCase();
+
+    if (!allowedPlans.includes(normalizedPlan)) {
+      throw new Error(
+        `Plan "${plan}" non autorisé`,
+      );
+    }
+
+    // Le plan FREE ne doit pas passer par Stripe
+    if (normalizedPlan === 'FREE') {
+      throw new Error(
+        'Le plan FREE ne nécessite pas de paiement Stripe',
+      );
+    }
+
+    // Recherche du plan en base
     const subscriptionPlan =
       await this.prisma.subscriptionPlan.findUnique({
         where: {
-          name: plan,
+          name: normalizedPlan,
         },
       });
 
     if (!subscriptionPlan) {
-      throw new Error('Plan introuvable');
-    }
-
-    if (!subscriptionPlan.stripePriceId) {
       throw new Error(
-        "Ce plan n'a pas de prix Stripe configuré",
+        `Plan "${normalizedPlan}" introuvable dans la base de données`,
       );
     }
 
+    // Vérification du Price ID Stripe
+    if (!subscriptionPlan.stripePriceId) {
+      throw new Error(
+        `Le plan "${normalizedPlan}" n'a pas de prix Stripe configuré`,
+      );
+    }
+
+    const frontendUrl =
+      this.config.get<string>('FRONTEND_URL') ??
+      'https://factureco.vercel.app';
+
+    // Création de la session Stripe
     const session =
       await this.stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -105,17 +137,53 @@ export class StripeService {
         ],
 
         success_url:
-          'https://factureco.vercel.app/payment-success?session_id={CHECKOUT_SESSION_ID}',
+          `${frontendUrl}/payment-success` +
+          '?session_id={CHECKOUT_SESSION_ID}',
 
         cancel_url:
-          'https://factureco.vercel.app/payment-cancel',
+          `${frontendUrl}/payment-cancel`,
 
         metadata: {
-          plan,
+          plan: normalizedPlan,
           email,
           userId,
         },
+
+        subscription_data: {
+          metadata: {
+            plan: normalizedPlan,
+            userId,
+          },
+        },
       });
+
+    console.log(
+      '========== CHECKOUT STRIPE =========='
+    );
+
+    console.log(
+      'PLAN :',
+      normalizedPlan,
+    );
+
+    console.log(
+      'PRICE ID :',
+      subscriptionPlan.stripePriceId,
+    );
+
+    console.log(
+      'USER ID :',
+      userId,
+    );
+
+    console.log(
+      'SESSION ID :',
+      session.id,
+    );
+
+    console.log(
+      '====================================='
+    );
 
     return {
       url: session.url,
@@ -212,30 +280,34 @@ export class StripeService {
         );
       }
 
-      // Vérifier que Stripe a bien créé le Customer
+      // Vérifier le Customer
       if (!session.customer) {
         throw new Error(
           'Customer Stripe manquant dans la session Checkout',
         );
       }
 
-      // Vérifier que Stripe a bien créé l'abonnement
+      // Vérifier l'abonnement
       if (!session.subscription) {
         throw new Error(
           'Subscription Stripe manquante dans la session Checkout',
         );
       }
 
+      const normalizedPlan =
+        plan.toUpperCase();
+
+      // Recherche du plan correspondant
       const subscriptionPlan =
         await this.prisma.subscriptionPlan.findUnique({
           where: {
-            name: plan,
+            name: normalizedPlan,
           },
         });
 
       if (!subscriptionPlan) {
         throw new Error(
-          'Plan abonnement introuvable',
+          `Plan "${normalizedPlan}" introuvable`,
         );
       }
 
@@ -267,6 +339,11 @@ export class StripeService {
       console.log(
         'USER ID :',
         userId,
+      );
+
+      console.log(
+        'PLAN :',
+        normalizedPlan,
       );
 
       console.log(
@@ -344,3 +421,4 @@ export class StripeService {
     };
   }
 }
+
