@@ -1,6 +1,4 @@
-
 import api from "./api";
-
 
 // ======================================================
 // STATUT
@@ -12,7 +10,6 @@ export type QuoteStatus =
   | "ACCEPTED"
   | "REFUSED"
   | "CONVERTED";
-
 
 // ======================================================
 // CLIENT
@@ -29,7 +26,6 @@ export interface QuoteClient {
   company?: string | null;
 }
 
-
 // ======================================================
 // LIGNE DEVIS
 // ======================================================
@@ -42,7 +38,6 @@ export interface QuoteItem {
   total: number;
   quoteId: string;
 }
-
 
 // ======================================================
 // DEVIS
@@ -75,7 +70,6 @@ export interface Quote {
   updatedAt: string;
 }
 
-
 // ======================================================
 // CREATION
 // ======================================================
@@ -94,7 +88,6 @@ export interface CreateQuoteData {
   vatRate?: number;
 }
 
-
 // ======================================================
 // MODIFICATION
 // ======================================================
@@ -107,7 +100,6 @@ export interface UpdateQuoteData {
   vatRate?: number;
 }
 
-
 // ======================================================
 // STATUT
 // ======================================================
@@ -115,7 +107,6 @@ export interface UpdateQuoteData {
 export interface UpdateQuoteStatusData {
   status: QuoteStatus;
 }
-
 
 // ======================================================
 // FACTURE
@@ -128,7 +119,6 @@ export type InvoiceStatus =
   | "OVERDUE"
   | "CANCELLED";
 
-
 export interface InvoiceItem {
   id: string;
   description: string;
@@ -140,7 +130,6 @@ export interface InvoiceItem {
   invoiceId: string;
 }
 
-
 export interface InvoiceClient {
   id: string;
   name: string;
@@ -151,7 +140,6 @@ export interface InvoiceClient {
   // Nom de l'entreprise du client
   company?: string | null;
 }
-
 
 export interface Invoice {
   id: string;
@@ -177,13 +165,11 @@ export interface Invoice {
   updatedAt?: string;
 }
 
-
 // ======================================================
 // GET TOUS LES DEVIS
 // ======================================================
 
 export async function getQuotes(): Promise<Quote[]> {
-
   const response =
     await api.get<Quote[]>(
       "/quotes",
@@ -192,7 +178,6 @@ export async function getQuotes(): Promise<Quote[]> {
   return response.data;
 }
 
-
 // ======================================================
 // GET UN DEVIS
 // ======================================================
@@ -200,7 +185,6 @@ export async function getQuotes(): Promise<Quote[]> {
 export async function getQuote(
   id: string,
 ): Promise<Quote> {
-
   const response =
     await api.get<Quote>(
       `/quotes/${id}`,
@@ -209,7 +193,6 @@ export async function getQuote(
   return response.data;
 }
 
-
 // ======================================================
 // CREER
 // ======================================================
@@ -217,7 +200,6 @@ export async function getQuote(
 export async function createQuote(
   data: CreateQuoteData,
 ): Promise<Quote> {
-
   const response =
     await api.post<Quote>(
       "/quotes",
@@ -227,7 +209,6 @@ export async function createQuote(
   return response.data;
 }
 
-
 // ======================================================
 // MODIFIER
 // ======================================================
@@ -236,7 +217,6 @@ export async function updateQuote(
   id: string,
   data: UpdateQuoteData,
 ): Promise<Quote> {
-
   const response =
     await api.patch<Quote>(
       `/quotes/${id}`,
@@ -246,7 +226,6 @@ export async function updateQuote(
   return response.data;
 }
 
-
 // ======================================================
 // MODIFIER STATUT
 // ======================================================
@@ -255,7 +234,6 @@ export async function updateQuoteStatus(
   id: string,
   status: QuoteStatus,
 ): Promise<Quote> {
-
   const response =
     await api.patch<Quote>(
       `/quotes/${id}/status`,
@@ -267,7 +245,6 @@ export async function updateQuoteStatus(
   return response.data;
 }
 
-
 // ======================================================
 // SUPPRIMER
 // ======================================================
@@ -275,7 +252,6 @@ export async function updateQuoteStatus(
 export async function deleteQuote(
   id: string,
 ): Promise<Quote> {
-
   const response =
     await api.delete<Quote>(
       `/quotes/${id}`,
@@ -284,7 +260,6 @@ export async function deleteQuote(
   return response.data;
 }
 
-
 // ======================================================
 // CONVERTIR EN FACTURE
 // ======================================================
@@ -292,7 +267,6 @@ export async function deleteQuote(
 export async function convertQuoteToInvoice(
   id: string,
 ): Promise<Invoice> {
-
   const response =
     await api.post<Invoice>(
       `/quotes/${id}/convert`,
@@ -301,7 +275,6 @@ export async function convertQuoteToInvoice(
   return response.data;
 }
 
-
 // ======================================================
 // PDF
 // ======================================================
@@ -309,7 +282,6 @@ export async function convertQuoteToInvoice(
 export async function getQuotePdf(
   id: string,
 ): Promise<Blob> {
-
   const response =
     await api.get<Blob>(
       `/quotes/${id}/pdf`,
@@ -320,4 +292,3 @@ export async function getQuotePdf(
 
   return response.data;
 }
-
