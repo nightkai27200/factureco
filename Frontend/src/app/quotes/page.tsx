@@ -2,7 +2,7 @@
 
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
 
 import { API_URL } from "@/lib/config";
@@ -12,850 +12,740 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   getQuotes,
   createQuote,
-  Quote
+  Quote,
 } from "@/services/quote.service";
-
 
 import {
   getClients,
-  Client
+  Client,
 } from "@/services/client.service";
 
 import api from "@/lib/api";
 
 
+// ============================================================
+// LIGNE DE DEVIS
+// ============================================================
+
 type Line = {
-
-  description:string;
-
-  quantity:number;
-
-  unitPrice:number;
-
+  description: string;
+  quantity: number;
+  unitPrice: number;
 };
 
 
+// ============================================================
+// PAGE
+// ============================================================
 
+export default function DevisPage() {
 
-export default function DevisPage(){
+  const [quotes, setQuotes] =
+    useState<Quote[]>([]);
 
+  const [clients, setClients] =
+    useState<Client[]>([]);
 
-const [quotes,setQuotes] =
-useState<Quote[]>([]);
+  const [clientId, setClientId] =
+    useState("");
 
+  const [title, setTitle] =
+    useState("");
 
-const [clients,setClients] =
-useState<Client[]>([]);
+  const [lines, setLines] =
+    useState<Line[]>([
+      {
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+      },
+    ]);
 
 
+  // ==========================================================
+  // CHARGEMENT
+  // ==========================================================
 
-const [clientId,setClientId] =
-useState("");
+  async function loadData() {
 
+    try {
 
+      const q =
+        await getQuotes();
 
-const [title,setTitle] =
-useState("");
+      const c =
+        await getClients();
 
+      setQuotes(q);
 
+      setClients(c);
 
-const [lines,setLines] =
-useState<Line[]>([
+    }
+    catch (error) {
 
-{
- description:"",
- quantity:1,
- unitPrice:0
-}
+      console.error(
+        "Erreur chargement données",
+        error
+      );
 
-]);
+    }
 
+  }
 
 
+  useEffect(() => {
 
+    loadData();
 
-async function loadData(){
+  }, []);
 
 
-try{
+  // ==========================================================
+  // MODIFIER UNE LIGNE
+  // ==========================================================
 
+  function updateLine(
+    index: number,
+    field: keyof Line,
+    value: string | number,
+  ) {
 
-const q =
-await getQuotes();
+    const copy =
+      [...lines];
 
+    copy[index] = {
+      ...copy[index],
+      [field]: value,
+    };
 
-const c =
-await getClients();
+    setLines(copy);
 
+  }
 
 
-setQuotes(q);
+  // ==========================================================
+  // AJOUTER UNE LIGNE
+  // ==========================================================
 
-setClients(c);
+  function addLine() {
 
+    setLines([
+      ...lines,
+      {
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+      },
+    ]);
 
-}
+  }
 
-catch(error){
 
-console.error(
-"Erreur chargement données",
-error
-);
+  // ==========================================================
+  // TOTAL
+  // ==========================================================
 
-}
+  function total() {
 
+    return lines.reduce(
+      (sum, line) =>
+        sum +
+        line.quantity *
+        line.unitPrice,
+      0
+    );
 
-}
+  }
 
 
+  // ==========================================================
+  // CREER LE DEVIS
+  // ==========================================================
 
+  async function saveQuote() {
 
+    if (!clientId) {
 
+      alert(
+        "Choisir un client"
+      );
 
-useEffect(()=>{
+      return;
 
+    }
 
-loadData();
 
+    if (!title.trim()) {
 
-},[]);
+      alert(
+        "Saisir un titre pour le devis"
+      );
 
+      return;
 
+    }
 
 
+    if (lines.length === 0) {
 
+      alert(
+        "Ajouter au moins une ligne au devis"
+      );
 
+      return;
 
+    }
 
-function updateLine(
-index:number,
-field:keyof Line,
-value:any
-){
 
+    const invalidLine =
+      lines.some(
+        (line) =>
+          !line.description.trim() ||
+          line.quantity <= 0 ||
+          line.unitPrice < 0
+      );
 
-const copy =
-[...lines];
 
+    if (invalidLine) {
 
-copy[index] = {
+      alert(
+        "Vérifiez les lignes du devis."
+      );
 
-...copy[index],
+      return;
 
-[field]:value
+    }
 
-};
 
+    try {
 
-setLines(copy);
+      // IMPORTANT :
+      // Le montant total n'est PAS envoyé au backend.
+      // Le backend doit recalculer le montant à partir
+      // des lignes du devis.
 
+      await createQuote({
 
-}
+        clientId,
 
+        title: title.trim(),
 
+        items: lines.map(
+          (line) => ({
 
+            description:
+              line.description.trim(),
 
+            quantity:
+              line.quantity,
 
+            unitPrice:
+              line.unitPrice,
 
-function addLine(){
+          })
+        ),
 
+      });
 
-setLines([
 
-...lines,
+      alert(
+        "Devis créé avec succès."
+      );
 
-{
 
-description:"",
+      setTitle("");
 
-quantity:1,
+      setClientId("");
 
-unitPrice:0
+      setLines([
+        {
+          description: "",
+          quantity: 1,
+          unitPrice: 0,
+        },
+      ]);
 
-}
 
-]);
+      await loadData();
 
+    }
+    catch (error) {
 
-}
+      console.error(
+        "Erreur création devis",
+        error
+      );
 
+      alert(
+        "Erreur lors de la création du devis."
+      );
 
+    }
 
+  }
 
 
+  // ==========================================================
+  // PDF
+  // ==========================================================
 
-function total(){
+  async function downloadPdf(
+    quoteId: string,
+  ) {
 
+    try {
 
-return lines.reduce(
+      const token =
+        localStorage.getItem(
+          "token"
+        );
 
-(sum,line)=>
 
-sum +
+      const response =
+        await api.get<Blob>(
+          `/quotes/${quoteId}/pdf`,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
 
-line.quantity *
+            responseType:
+              "blob",
+          }
+        );
 
-line.unitPrice,
 
-0
+      const url =
+        window.URL.createObjectURL(
+          response.data
+        );
 
-);
 
+      window.open(url);
 
-}
 
+    }
+    catch (error) {
 
+      console.error(
+        "Erreur PDF",
+        error
+      );
 
+      alert(
+        "Impossible de télécharger le PDF"
+      );
 
+    }
 
+  }
 
 
-async function saveQuote(){
+  // ==========================================================
+  // CONVERSION EN FACTURE
+  // ==========================================================
 
+  async function convertQuote(
+    quoteId: string,
+  ) {
 
+    try {
 
-if(!clientId){
+      const response =
+        await fetch(
+          `${API_URL}/quotes/${quoteId}/convert`,
+          {
+            method: "POST",
 
-alert(
-"Choisir un client"
-);
+            headers: {
+              Authorization:
+                `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
 
-return;
 
-}
+      if (!response.ok) {
 
+        throw new Error(
+          "Erreur conversion devis"
+        );
 
+      }
 
-await createQuote({
 
+      alert(
+        "Devis transformé en facture"
+      );
 
-clientId,
 
+      await loadData();
 
-title,
+    }
+    catch (error) {
 
+      console.error(
+        "Erreur conversion",
+        error
+      );
 
-amount:total(),
+      alert(
+        "Impossible de transformer le devis en facture"
+      );
 
+    }
 
+  }
 
-items:
 
-lines.map(line=>({
+  // ==========================================================
+  // SUPPRESSION
+  // ==========================================================
 
+  async function deleteQuote(
+    quoteId: string,
+  ) {
 
-description:
-line.description,
+    try {
 
+      const response =
+        await fetch(
+          `${API_URL}/quotes/${quoteId}`,
+          {
+            method: "DELETE",
 
-quantity:
-line.quantity,
+            headers: {
+              Authorization:
+                `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
 
 
-unitPrice:
-line.unitPrice,
+      if (!response.ok) {
 
+        throw new Error(
+          "Erreur suppression devis"
+        );
 
-total:
-line.quantity *
-line.unitPrice
+      }
 
 
-}))
+      await loadData();
 
+    }
+    catch (error) {
 
+      console.error(
+        "Erreur suppression",
+        error
+      );
 
-});
+      alert(
+        "Impossible de supprimer le devis"
+      );
 
+    }
 
+  }
 
-alert(
-"Devis créé"
-);
 
+  // ==========================================================
+  // AFFICHAGE
+  // ==========================================================
 
+  return (
 
-setTitle("");
+    <ProtectedRoute>
 
-setLines([
+      <main
+        style={{
+          padding: "40px",
+        }}
+      >
 
-{
-description:"",
-quantity:1,
-unitPrice:0
-}
+        <h1>
+          Devis
+        </h1>
 
-]);
 
+        {/* ====================================================
+            NOUVEAU DEVIS
+        ==================================================== */}
 
+        <h2>
+          Nouveau devis
+        </h2>
 
-loadData();
 
+        {/* CLIENT */}
 
+        <select
+          value={clientId}
+          onChange={(e) =>
+            setClientId(
+              e.target.value
+            )
+          }
+        >
 
-}
+          <option value="">
+            Choisir un client
+          </option>
 
 
+          {clients.map(
+            (client) => (
 
+              <option
+                key={client.id}
+                value={client.id}
+              >
+                {client.name}
+              </option>
 
+            )
+          )}
 
+        </select>
 
 
+        <br />
+        <br />
 
-return (
 
-<ProtectedRoute>
+        {/* TITRE */}
 
+        <input
+          placeholder="Titre du devis"
+          value={title}
+          onChange={(e) =>
+            setTitle(
+              e.target.value
+            )
+          }
+        />
 
-<main
-style={{
-padding:"40px"
-}}
->
 
+        {/* ====================================================
+            LIGNES
+        ==================================================== */}
 
-<h1>
-Devis
-</h1>
+        <h3>
+          Lignes
+        </h3>
 
 
+        {lines.map(
+          (line, index) => (
 
-<h2>
-Nouveau devis
-</h2>
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
+            >
 
+              <input
+                placeholder="Description"
+                value={
+                  line.description
+                }
+                onChange={(e) =>
+                  updateLine(
+                    index,
+                    "description",
+                    e.target.value
+                  )
+                }
+              />
 
 
+              <input
+                type="number"
+                min="1"
+                value={
+                  line.quantity
+                }
+                onChange={(e) =>
+                  updateLine(
+                    index,
+                    "quantity",
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
 
-<select
 
-value={clientId}
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={
+                  line.unitPrice
+                }
+                onChange={(e) =>
+                  updateLine(
+                    index,
+                    "unitPrice",
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
 
-onChange={
-e=>setClientId(
-e.target.value
-)
-}
+            </div>
 
->
+          )
+        )}
 
 
-<option value="">
+        <button
+          onClick={addLine}
+        >
+          Ajouter une ligne
+        </button>
 
-Choisir un client
 
-</option>
+        {/* TOTAL */}
 
+        <h3>
+          Total :{" "}
+          {total().toFixed(2)} €
+        </h3>
 
 
-{
+        {/* CREATION */}
 
-clients.map(client=>(
+        <button
+          onClick={saveQuote}
+        >
+          Créer le devis
+        </button>
 
 
-<option
+        <hr />
 
-key={client.id}
 
-value={client.id}
+        {/* ====================================================
+            LISTE DES DEVIS
+        ==================================================== */}
 
->
+        <h2>
+          Mes devis
+        </h2>
 
-{client.name}
 
-</option>
+        {quotes.map(
+          (q) => (
 
+            <div
+              key={q.id}
+              style={{
+                border:
+                  "1px solid #ddd",
 
-))
+                padding: "15px",
 
+                marginBottom: "10px",
 
-}
+                borderRadius: "8px",
+              }}
+            >
 
+              <p>
 
+                <strong>
+                  {q.number}
+                </strong>
 
-</select>
+              </p>
 
 
+              <p>
 
+                Statut :{" "}
 
-<br/><br/>
+                {q.status}
 
+              </p>
 
 
+              <p>
 
+                Montant :{" "}
 
-<input
+                {Number(
+                  q.amount || 0
+                ).toFixed(2)} €
 
-placeholder="Titre du devis"
+              </p>
 
-value={title}
 
-onChange={
-e=>setTitle(
-e.target.value
-)
-}
+              {/* ACTIONS */}
 
-/>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                }}
+              >
 
+                {/* PDF */}
 
+                <button
+                  onClick={() =>
+                    downloadPdf(
+                      q.id
+                    )
+                  }
+                >
+                  📄 PDF
+                </button>
 
 
+                {/* CONVERTIR */}
 
-<h3>
-Lignes
-</h3>
+                <button
+                  onClick={() =>
+                    convertQuote(
+                      q.id
+                    )
+                  }
+                >
+                  🔄 Convertir
+                </button>
 
 
+                {/* SUPPRIMER */}
 
+                <button
+                  onClick={() =>
+                    deleteQuote(
+                      q.id
+                    )
+                  }
+                >
+                  🗑 Supprimer
+                </button>
 
+              </div>
 
-{
+            </div>
 
-lines.map((line,index)=>(
+          )
+        )}
 
+      </main>
 
-<div
+    </ProtectedRoute>
 
-key={index}
-
-style={{
-
-display:"flex",
-
-gap:"10px",
-
-marginBottom:"10px"
-
-}}
-
->
-
-
-
-<input
-
-placeholder="Description"
-
-value={line.description}
-
-onChange={
-e=>
-
-updateLine(
-
-index,
-
-"description",
-
-e.target.value
-
-)
-
-}
-
-/>
-
-
-
-
-
-<input
-
-type="number"
-
-value={line.quantity}
-
-onChange={
-e=>
-
-updateLine(
-
-index,
-
-"quantity",
-
-Number(
-e.target.value
-)
-
-)
-
-}
-
-/>
-
-
-
-
-
-<input
-
-type="number"
-
-value={line.unitPrice}
-
-onChange={
-e=>
-
-updateLine(
-
-index,
-
-"unitPrice",
-
-Number(
-e.target.value
-)
-
-)
-
-}
-
-/>
-
-
-
-
-</div>
-
-
-))
-
-
-}
-
-
-
-
-
-
-
-<button
-onClick={addLine}
->
-
-Ajouter une ligne
-
-</button>
-
-
-
-
-
-<h3>
-
-Total :
-
-{total().toFixed(2)} €
-
-</h3>
-
-
-
-
-
-<button
-onClick={saveQuote}
->
-
-Créer le devis
-
-</button>
-
-
-
-
-
-
-
-<hr/>
-
-
-
-
-
-
-<h2>
-Mes devis
-</h2>
-
-
-
-
-
-
-
-{
-
-quotes.map((q)=>(
-
-
-<div
-
-key={q.id}
-
-style={{
-
-border:"1px solid #ddd",
-
-padding:"15px",
-
-marginBottom:"10px",
-
-borderRadius:"8px"
-
-}}
-
->
-
-
-<p>
-
-<strong>
-
-{q.number}
-
-</strong>
-
-</p>
-
-
-
-
-<p>
-
-Statut :
-
-{q.status}
-
-</p>
-
-
-
-
-<p>
-
-Montant :
-
-{q.amount.toFixed(2)} €
-
-</p>
-
-
-
-
-
-<div
-
-style={{
-
-display:"flex",
-
-gap:"10px"
-
-}}
-
->
-
-
-
-
-<button
-
-onClick={async()=>{
-
-try{
-
-const token =
-localStorage.getItem("token");
-
-
-const response =
-await api.get<Blob>(
-
-`/quotes/${q.id}/pdf`,
-
-{
-
-headers:{
-
-Authorization:
-`Bearer ${token}`
-
-},
-
-responseType:"blob"
-
-}
-
-);
-
-
-
-const url =
-window.URL.createObjectURL(
-response.data
-);
-
-
-
-window.open(url);
-
-
-
-}
-
-catch(error){
-
-console.error(
-"Erreur PDF",
-error
-);
-
-
-alert(
-"Impossible de télécharger le PDF"
-);
-
-}
-
-
-}}
-
->
-
-📄 PDF
-
-</button>
-
-
-
-
-
-
-
-<button
-
-onClick={async()=>{
-
-
-await fetch(
-
-`${API_URL}/quotes/${q.id}/convert`,
-
-{
-
-method:"POST",
-
-headers:{
-
-Authorization:
-
-`Bearer ${localStorage.getItem("token")}`
-
-}
-
-}
-
-);
-
-
-
-alert(
-"Devis transformé en facture"
-);
-
-
-
-loadData();
-
-
-
-}}
-
->
-
-🔄 Convertir
-
-</button>
-
-
-
-
-
-
-
-<button
-
-onClick={async()=>{
-
-
-await fetch(
-
-`${API_URL}/quotes/${q.id}`,
-
-{
-
-method:"DELETE",
-
-headers:{
-
-Authorization:
-
-`Bearer ${localStorage.getItem("token")}`
-
-}
-
-}
-
-);
-
-
-
-loadData();
-
-
-
-}}
-
->
-
-🗑 Supprimer
-
-</button>
-
-
-
-
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-))
-
-
-}
-
-
-
-
-
-</main>
-
-
-</ProtectedRoute>
-
-
-);
-
+  );
 
 }
