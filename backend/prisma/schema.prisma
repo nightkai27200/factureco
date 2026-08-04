@@ -6,6 +6,12 @@ datasource db {
   provider = "postgresql"
 }
 
+/**
+ * =========================================================
+ * SUBSCRIPTION
+ * =========================================================
+ */
+
 model SubscriptionPlan {
   id              String   @id @default(uuid())
   name            String   @unique
@@ -14,45 +20,126 @@ model SubscriptionPlan {
   createdAt       DateTime @default(now())
   stripePriceId   String?  @unique
   stripeProductId String?  @unique
-  users           User[]
+
+  users User[]
 }
 
 model User {
-  id                   String             @id @default(uuid())
-  email                String             @unique
-  name                 String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  passwordHash         String
-  role                 Role               @default(USER)
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  passwordHash String
+  role         Role     @default(USER)
+
   subscriptionId       String?
   stripeCustomerId     String?            @unique
   stripeSubscriptionId String?            @unique
   subscriptionEnd      DateTime?
   subscriptionStart    DateTime?
   subscriptionStatus   SubscriptionStatus @default(FREE)
-  clients              Client[]
-  company              Company?
-  invoices             Invoice[]
-  payments             Payment[]
-  quotes               Quote[]
-  subscription         SubscriptionPlan?  @relation(fields: [subscriptionId], references: [id])
+
+  clients           Client[]
+  company           Company?
+  invoices          Invoice[]
+  payments          Payment[]
+  quotes            Quote[]
+  invoicePayments   InvoicePayment[]
+  receivedInvoices  ReceivedInvoice[]
+  eReportingRecords EReportingRecord[]
+
+  subscription SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
 }
 
+/**
+ * =========================================================
+ * CLIENTS
+ * =========================================================
+ */
+
 model Client {
-  id        String    @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  company   String?
-  address   String?
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoices  Invoice[]
-  quotes    Quote[]
+  id String @id @default(uuid())
+
+  name    String
+  email   String?
+  phone   String?
+  company String?
+
+  address    String?
+  postalCode String?
+  city       String?
+  country    String? @default("FR")
+
+  /**
+   * Identifiants entreprise
+   */
+  siren     String?
+  siret     String?
+  vatNumber String?
+
+  type ClientType @default(BUSINESS)
+
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  invoices Invoice[]
+  quotes   Quote[]
+
+  @@index([userId])
+  @@index([siren])
+  @@index([siret])
+  @@index([vatNumber])
 }
+
+/**
+ * =========================================================
+ * COMPANY
+ * =========================================================
+ */
+
+model Company {
+  id String @id @default(uuid())
+
+  name String
+
+  address    String?
+  postalCode String?
+  city       String?
+  country    String? @default("FR")
+
+  email String?
+  phone String?
+
+  /**
+   * Identifiants entreprise
+   */
+  siren     String?
+  siret     String?
+  vatNumber String?
+
+  logo    String?
+  website String?
+
+  userId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * =========================================================
+ * DOCUMENT COUNTER
+ * =========================================================
+ */
 
 model DocumentCounter {
   id    String @id @default(uuid())
@@ -63,100 +150,512 @@ model DocumentCounter {
   @@unique([type, year])
 }
 
+/**
+ * =========================================================
+ * QUOTES
+ * =========================================================
+ */
+
 model Quote {
-  id          String      @id @default(uuid())
-  number      String
-  status      QuoteStatus
+  id String @id @default(uuid())
+
+  number String
+  status QuoteStatus
+
   title       String?
   description String?
-  amount      Float
-  clientId    String
-  userId      String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  subtotal    Float       @default(0)
-  vatAmount   Float       @default(0)
-  vatRate     Float       @default(20)
-  invoice     Invoice?
-  client      Client      @relation(fields: [clientId], references: [id])
-  user        User        @relation(fields: [userId], references: [id])
-  quoteItems  QuoteItem[]
+
+  amount    Float
+  subtotal  Float @default(0)
+  vatAmount Float @default(0)
+  vatRate   Float @default(20)
+
+  clientId String
+  userId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  invoice    Invoice?
+  quoteItems QuoteItem[]
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([status])
 }
 
 model QuoteItem {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
+
   description String
   quantity    Float
   unitPrice   Float
   total       Float
-  quoteId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-}
 
-model Invoice {
-  id           String        @id @default(uuid())
-  number       String
-  status       InvoiceStatus
-  amount       Float
-  clientId     String
-  userId       String
-  quoteId      String?       @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  subtotal     Float         @default(0)
-  vatAmount    Float         @default(0)
-  vatRate      Float         @default(20)
-  client       Client        @relation(fields: [clientId], references: [id])
-  quote        Quote?        @relation(fields: [quoteId], references: [id])
-  user         User          @relation(fields: [userId], references: [id])
-  invoiceItems InvoiceItem[]
-}
+  quoteId String
 
-model InvoiceItem {
-  id          String   @id @default(uuid())
-  description String
-  quantity    Float
-  unitPrice   Float
-  total       Float
-  invoiceId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-}
-
-model Company {
-  id        String   @id @default(uuid())
-  name      String
-  address   String?
-  email     String?
-  phone     String?
-  siret     String?
-  vatNumber String?
-  logo      String?
-  userId    String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  city      String?
-  website   String?
-  user      User     @relation(fields: [userId], references: [id])
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
 }
 
-model Payment {
-  id              String   @id @default(uuid())
-  userId          String
-  stripePaymentId String   @unique
-  amount          Float
-  currency        String   @default("eur")
-  status          String
-  createdAt       DateTime @default(now())
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+/**
+ * =========================================================
+ * INVOICES
+ * =========================================================
+ */
+
+model Invoice {
+  id String @id @default(uuid())
+
+  number String
+
+  /**
+   * Statut métier
+   */
+  status InvoiceStatus @default(DRAFT)
+
+  /**
+   * Statut du flux de facturation électronique
+   */
+  eInvoiceStatus EInvoiceStatus @default(NOT_APPLICABLE)
+
+  /**
+   * Format électronique
+   */
+  electronicFormat ElectronicInvoiceFormat?
+
+  /**
+   * Dates
+   */
+  issueDate DateTime?
+  dueDate   DateTime?
+
+  /**
+   * Devise
+   */
+  currency String @default("EUR")
+
+  /**
+   * Montants
+   * Conservés en Float dans cette première migration
+   * pour éviter de casser le code métier actuel.
+   */
+  amount    Float
+  subtotal  Float @default(0)
+  vatAmount Float @default(0)
+  vatRate   Float @default(20)
+
+  /**
+   * Données fiscales / métier
+   */
+  operationCategory OperationCategory?
+  vatPaymentOption  VatPaymentOption?
+
+  /**
+   * Adresse de livraison
+   */
+  deliveryAddress    String?
+  deliveryPostalCode String?
+  deliveryCity       String?
+  deliveryCountry    String?
+
+  /**
+   * Référence facture précédente.
+   * Utile notamment pour avoir / correction.
+   */
+  precedingInvoiceNumber String?
+
+  /**
+   * Nature de la facture
+   */
+  invoiceType InvoiceType @default(STANDARD)
+
+  /**
+   * Conditions / informations de paiement
+   */
+  paymentTerms  String?
+  paymentMethod PaymentMethod?
+
+  clientId String
+  userId   String
+
+  quoteId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quote  Quote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+
+  invoiceItems InvoiceItem[]
+
+  electronicDocument ElectronicInvoiceDocument?
+
+  transmissions EInvoiceTransmission[]
+
+  invoicePayments InvoicePayment[]
+
+  eReportingRecords EReportingRecord[]
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([status])
+  @@index([eInvoiceStatus])
+  @@index([issueDate])
+  @@index([number])
 }
+
+/**
+ * =========================================================
+ * INVOICE ITEMS
+ * =========================================================
+ */
+
+model InvoiceItem {
+  id String @id @default(uuid())
+
+  description String
+
+  quantity  Float
+  unitPrice Float
+
+  /**
+   * TVA de la ligne
+   */
+  vatRate   Float @default(20)
+  vatAmount Float @default(0)
+
+  total Float
+
+  invoiceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+/**
+ * =========================================================
+ * ELECTRONIC INVOICE DOCUMENT
+ * =========================================================
+ */
+
+model ElectronicInvoiceDocument {
+  id String @id @default(uuid())
+
+  invoiceId String @unique
+
+  /**
+   * Format du document
+   */
+  format ElectronicInvoiceFormat
+
+  /**
+   * Emplacements des fichiers
+   */
+  pdfPath String?
+  xmlPath String?
+
+  /**
+   * Intégrité
+   */
+  documentHash String?
+
+  /**
+   * Version du format
+   */
+  formatVersion String?
+
+  generatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * =========================================================
+ * E-INVOICE TRANSMISSION
+ * =========================================================
+ */
+
+model EInvoiceTransmission {
+  id String @id @default(uuid())
+
+  invoiceId String
+
+  /**
+   * Plateforme utilisée
+   */
+  provider String
+
+  /**
+   * Identifiant externe fourni par la plateforme
+   */
+  externalId String?
+
+  /**
+   * Identifiant de corrélation
+   */
+  requestId String?
+
+  status TransmissionStatus @default(PENDING)
+
+  /**
+   * Erreurs
+   */
+  errorCode    String?
+  errorMessage String?
+
+  /**
+   * Données techniques
+   */
+  requestPayload  Json?
+  responsePayload Json?
+
+  sentAt     DateTime?
+  receivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([externalId])
+  @@index([requestId])
+  @@index([status])
+  @@index([provider])
+}
+
+/**
+ * =========================================================
+ * RECEIVED INVOICES
+ * =========================================================
+ */
+
+model ReceivedInvoice {
+  id String @id @default(uuid())
+
+  /**
+   * Identifiant de la plateforme
+   */
+  externalId String?
+  provider   String?
+
+  invoiceNumber String
+
+  /**
+   * Fournisseur
+   */
+  supplierName      String
+  supplierSiren     String?
+  supplierSiret     String?
+  supplierVatNumber String?
+
+  supplierAddress    String?
+  supplierPostalCode String?
+  supplierCity       String?
+  supplierCountry    String? @default("FR")
+
+  /**
+   * Dates
+   */
+  issueDate DateTime?
+  dueDate   DateTime?
+
+  /**
+   * Montants
+   */
+  amount    Float
+  subtotal  Float?
+  vatAmount Float?
+  currency  String @default("EUR")
+
+  /**
+   * Traitement interne
+   */
+  status ReceivedInvoiceStatus @default(RECEIVED)
+
+  /**
+   * Documents
+   */
+  pdfPath String?
+  xmlPath String?
+
+  /**
+   * Données originales
+   */
+  rawPayload Json?
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /**
+   * On ne met volontairement PAS de @@unique([provider, externalId])
+   * car externalId est nullable.
+   * L'unicité pourra être contrôlée côté service lorsqu'un
+   * identifiant externe est présent.
+   */
+  @@index([provider])
+  @@index([externalId])
+  @@index([userId])
+  @@index([supplierSiren])
+  @@index([status])
+  @@index([receivedAt])
+}
+
+/**
+ * =========================================================
+ * INVOICE PAYMENTS
+ * =========================================================
+ */
+
+model InvoicePayment {
+  id String @id @default(uuid())
+
+  invoiceId String
+  userId    String
+
+  amount Float
+
+  currency String @default("EUR")
+
+  paymentDate DateTime
+
+  method    PaymentMethod?
+  reference String?
+
+  /**
+   * Suivi e-reporting
+   */
+  reportingStatus ReportingStatus @default(NOT_REPORTED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([userId])
+  @@index([paymentDate])
+  @@index([reportingStatus])
+}
+
+/**
+ * =========================================================
+ * E-REPORTING
+ * =========================================================
+ */
+
+model EReportingRecord {
+  id String @id @default(uuid())
+
+  userId String
+
+  /**
+   * Facultatif : certains éléments peuvent être
+   * liés à une facture.
+   */
+  invoiceId String?
+
+  type EReportingType
+
+  status ReportingStatus @default(PENDING)
+
+  provider   String?
+  externalId String?
+  requestId  String?
+
+  /**
+   * Données préparées pour transmission
+   */
+  payload Json
+
+  responsePayload Json?
+
+  errorCode    String?
+  errorMessage String?
+
+  sentAt      DateTime?
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([type])
+  @@index([status])
+  @@index([provider])
+  @@index([externalId])
+}
+
+/**
+ * =========================================================
+ * STRIPE PAYMENTS
+ * =========================================================
+ */
+
+/**
+ * Paiements liés à l'abonnement Facturco.
+ * À ne pas confondre avec InvoicePayment,
+ * qui correspond aux paiements des factures clients.
+ */
+
+model Payment {
+  id String @id @default(uuid())
+
+  userId String
+
+  stripePaymentId String @unique
+
+  amount Float
+
+  currency String @default("eur")
+
+  status String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/**
+ * =========================================================
+ * ENUMS
+ * =========================================================
+ */
 
 enum Role {
   USER
   ADMIN
+}
+
+enum ClientType {
+  BUSINESS
+  INDIVIDUAL
 }
 
 enum QuoteStatus {
@@ -174,6 +673,116 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+/**
+ * Statut électronique de la facture
+ */
+enum EInvoiceStatus {
+  NOT_APPLICABLE
+  TO_SEND
+  PENDING
+  SENT
+  RECEIVED
+  ACCEPTED
+  REJECTED
+  ERROR
+}
+
+/**
+ * Formats électroniques que Facturco pourra gérer.
+ */
+enum ElectronicInvoiceFormat {
+  FACTUR_X
+  UBL
+  CII
+}
+
+/**
+ * Nature de l'opération.
+ */
+enum OperationCategory {
+  GOODS
+  SERVICES
+  MIXED
+}
+
+/**
+ * Option de paiement de TVA.
+ */
+enum VatPaymentOption {
+  DEBITS
+  RECEIPTS
+}
+
+/**
+ * Nature de la facture.
+ */
+enum InvoiceType {
+  STANDARD
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+/**
+ * Cycle de transmission.
+ */
+enum TransmissionStatus {
+  PENDING
+  SENT
+  RECEIVED
+  DELIVERED
+  ACCEPTED
+  REJECTED
+  ERROR
+}
+
+/**
+ * Statut d'une facture reçue.
+ */
+enum ReceivedInvoiceStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  ACCEPTED
+  REJECTED
+  ERROR
+  ARCHIVED
+}
+
+/**
+ * Types d'e-reporting.
+ */
+enum EReportingType {
+  TRANSACTION
+  PAYMENT
+}
+
+/**
+ * Statut d'un élément d'e-reporting.
+ */
+enum ReportingStatus {
+  NOT_REPORTED
+  PENDING
+  SENT
+  ACCEPTED
+  REJECTED
+  ERROR
+}
+
+/**
+ * Moyens de paiement.
+ */
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  DIRECT_DEBIT
+  CHEQUE
+  OTHER
+}
+
+/**
+ * Abonnement Facturco.
+ */
 enum SubscriptionStatus {
   FREE
   ACTIVE

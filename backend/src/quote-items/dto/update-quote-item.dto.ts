@@ -1,4 +1,32 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateQuoteItemDto } from './create-quote-item.dto';
+import {
+  IsOptional,
+  IsNumber,
+  IsString,
+  Min,
+} from 'class-validator';
 
-export class UpdateQuoteItemDto extends PartialType(CreateQuoteItemDto) {}
+import {
+  Type,
+} from 'class-transformer';
+
+
+export class UpdateQuoteItemDto {
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01)
+  quantity?: number;
+
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
+}

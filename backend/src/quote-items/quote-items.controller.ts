@@ -22,27 +22,31 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class QuoteItemsController {
 
-
   constructor(
     private readonly quoteItemsService: QuoteItemsService,
   ) {}
 
 
+  // =========================================================
+  // CREER UNE LIGNE
+  // =========================================================
 
   @Post()
   create(
-    @Body() createQuoteItemDto: CreateQuoteItemDto,
+    @Body() dto: CreateQuoteItemDto,
     @Req() req: any,
   ) {
 
     return this.quoteItemsService.create(
-      createQuoteItemDto,
+      dto,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // TOUTES LES LIGNES D'UN DEVIS
+  // =========================================================
 
   @Get(':quoteId')
   findAll(
@@ -54,10 +58,12 @@ export class QuoteItemsController {
       quoteId,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // UNE LIGNE
+  // =========================================================
 
   @Get('item/:id')
   findOne(
@@ -69,27 +75,31 @@ export class QuoteItemsController {
       id,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // MODIFIER UNE LIGNE
+  // =========================================================
 
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() updateQuoteItemDto: UpdateQuoteItemDto,
+    @Body() dto: UpdateQuoteItemDto,
     @Req() req: any,
   ) {
 
     return this.quoteItemsService.update(
       id,
-      updateQuoteItemDto,
+      dto,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // SUPPRIMER UNE LIGNE
+  // =========================================================
 
   @Delete(':id')
   remove(
@@ -101,7 +111,5 @@ export class QuoteItemsController {
       id,
       req.user.id,
     );
-
   }
-
 }

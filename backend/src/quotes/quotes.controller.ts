@@ -11,9 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-
-import { Response } from 'express';
-
+import type { Response } from 'express';
 
 import { QuotesService } from './quotes.service';
 
@@ -21,223 +19,189 @@ import { CreateQuoteDto } from './dto/create-quote.dto';
 import { UpdateQuoteDto } from './dto/update-quote.dto';
 import { UpdateQuoteStatusDto } from './dto/update-quote-status.dto';
 
-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { PdfService } from '../pdf/pdf.service';
-
 
 
 @Controller('quotes')
 @UseGuards(JwtAuthGuard)
 export class QuotesController {
 
-
   constructor(
-    private quotesService: QuotesService,
-    private pdfService: PdfService,
+    private readonly quotesService: QuotesService,
+    private readonly pdfService: PdfService,
   ) {}
 
 
+  // =========================================================
+  // CREER UN DEVIS
+  // POST /quotes
+  // =========================================================
 
-
-
-  // Créer un devis
   @Post()
-  create(
+  async create(
     @Body() createQuoteDto: CreateQuoteDto,
-    @Req() req:any,
-  ){
+    @Req() req: any,
+  ) {
 
     return this.quotesService.create({
 
       ...createQuoteDto,
 
-      number:
-        `DEV-${Date.now()}`,
-
-      userId:
-        req.user.id,
+      userId: req.user.id,
 
     });
-
   }
 
 
+  // =========================================================
+  // TOUS LES DEVIS
+  // GET /quotes
+  // =========================================================
 
-
-
-
-
-  // Tous les devis
   @Get()
-  findAll(
-    @Req() req:any,
-  ){
+  async findAll(
+    @Req() req: any,
+  ) {
 
     return this.quotesService.findAllByUser(
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // UN DEVIS
+  // GET /quotes/:id
+  // =========================================================
 
-
-
-
-
-  // Un devis
   @Get(':id')
-  findOne(
-    @Param('id') id:string,
-    @Req() req:any,
-  ){
+  async findOne(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
 
     return this.quotesService.findOne(
       id,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // PDF
+  // GET /quotes/:id/pdf
+  // =========================================================
 
-
-
-
-
-  // Générer PDF devis
   @Get(':id/pdf')
-async pdf(
-  @Param('id') id:string,
-  @Req() req:any,
-  @Res() res:any,
-){
+  async pdf(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
 
-  const quote =
-    await this.quotesService.findOneForPdf(
-      id,
-      req.user.id,
+    const quote =
+      await this.quotesService.findOneForPdf(
+        id,
+        req.user.id,
+      );
+
+
+    const pdf =
+      await this.pdfService.generateQuotePdf(
+        quote,
+      );
+
+
+    res.setHeader(
+      'Content-Type',
+      'application/pdf',
     );
 
-    console.log(
-  "DEVIS PDF =>",
-  quote.number
-);
+
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="devis-${quote.number}.pdf"`,
+    );
 
 
-console.log(
-  "COMPANY =>",
-  quote.user?.company
-);
+    pdf.pipe(res);
+  }
 
 
-const pdf = await this.pdfService.generateQuotePdf(quote);
+  // =========================================================
+  // MODIFIER UN DEVIS
+  // PATCH /quotes/:id
+  // =========================================================
 
-
-  res.setHeader(
-    'Content-Type',
-    'application/pdf',
-  );
-
-
-  res.setHeader(
-    'Content-Disposition',
-    `inline; filename=devis-${quote.number}.pdf`,
-  );
-
-
-  pdf.pipe(res);
-
-}
-
-
-
-
-
-
-  // Modifier un devis
   @Patch(':id')
-  update(
-    @Param('id') id:string,
-    @Body() updateQuoteDto:UpdateQuoteDto,
-    @Req() req:any,
-  ){
+  async update(
+    @Param('id') id: string,
+    @Body() updateQuoteDto: UpdateQuoteDto,
+    @Req() req: any,
+  ) {
 
     return this.quotesService.update(
       id,
       req.user.id,
       updateQuoteDto,
     );
-
   }
 
 
+  // =========================================================
+  // MODIFIER LE STATUT
+  // PATCH /quotes/:id/status
+  // =========================================================
 
-
-
-
-
-
-  // Modifier uniquement le statut
   @Patch(':id/status')
-  updateStatus(
-    @Param('id') id:string,
-    @Body() dto:UpdateQuoteStatusDto,
-    @Req() req:any,
-  ){
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateQuoteStatusDto,
+    @Req() req: any,
+  ) {
 
     return this.quotesService.updateStatus(
       id,
       req.user.id,
       dto.status,
     );
-
   }
 
 
+  // =========================================================
+  // SUPPRIMER UN DEVIS
+  // DELETE /quotes/:id
+  // =========================================================
 
-
-
-
-
-
-  // Supprimer un devis
   @Delete(':id')
-  remove(
-    @Param('id') id:string,
-    @Req() req:any,
-  ){
+  async remove(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
 
     return this.quotesService.remove(
       id,
       req.user.id,
     );
-
   }
 
 
+  // =========================================================
+  // CONVERTIR EN FACTURE
+  // POST /quotes/:id/convert
+  // =========================================================
 
-
-
-
-
-
-  // Transformer devis en facture
   @Post(':id/convert')
-  convertToInvoice(
-    @Param('id') id:string,
-    @Req() req:any,
-  ){
+  async convertToInvoice(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
 
     return this.quotesService.convertToInvoice(
       id,
       req.user.id,
     );
-
   }
-
-
-
 }

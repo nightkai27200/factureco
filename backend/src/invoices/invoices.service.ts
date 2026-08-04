@@ -7,36 +7,30 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { InvoiceStatus } from '@prisma/client';
 
+import { InvoiceComplianceValidator } from './compliance/invoice-compliance.validator';
+
 @Injectable()
 export class InvoicesService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly complianceValidator: InvoiceComplianceValidator,
   ) {}
 
-  /**
-   * ============================================================
-   * CRÉER UNE FACTURE
-   * ============================================================
-   */
+  // ============================================================
+  // CRÉER UNE FACTURE
+  // ============================================================
+
   async create(data: any) {
     const {
       items,
       ...invoiceData
     } = data;
 
-    // ------------------------------------------------------------
-    // Vérification des lignes
-    // ------------------------------------------------------------
-
     if (!Array.isArray(items) || items.length === 0) {
       throw new BadRequestException(
         'Une facture doit contenir au moins une ligne.',
       );
     }
-
-    // ------------------------------------------------------------
-    // Vérification des articles
-    // ------------------------------------------------------------
 
     for (const item of items) {
       if (!item.description) {
@@ -64,11 +58,9 @@ export class InvoicesService {
       }
     }
 
-    // ------------------------------------------------------------
-    // TVA
-    // ------------------------------------------------------------
-
-    const vatRate = Number(data.vatRate ?? 20);
+    const vatRate = Number(
+      data.vatRate ?? 20,
+    );
 
     const allowedVatRates = [
       0,
@@ -77,52 +69,42 @@ export class InvoicesService {
       20,
     ];
 
-    if (!allowedVatRates.includes(vatRate)) {
+    if (
+      !allowedVatRates.includes(
+        vatRate,
+      )
+    ) {
       throw new BadRequestException(
         'Taux de TVA invalide. Autorisés : 0, 5.5, 10, 20.',
       );
     }
 
-    // ------------------------------------------------------------
-    // Calcul HT
-    // ------------------------------------------------------------
+    const subtotal =
+      this.roundMoney(
+        items.reduce(
+          (
+            sum: number,
+            item: any,
+          ) =>
+            sum +
+            Number(item.quantity) *
+              Number(item.unitPrice),
+          0,
+        ),
+      );
 
-    const subtotal = this.roundMoney(
-      items.reduce(
-        (sum, item) =>
-          sum +
-          Number(item.quantity) *
-            Number(item.unitPrice),
-        0,
-      ),
-    );
+    const vatAmount =
+      this.roundMoney(
+        (subtotal * vatRate) / 100,
+      );
 
-    // ------------------------------------------------------------
-    // Calcul TVA
-    // ------------------------------------------------------------
-
-    const vatAmount = this.roundMoney(
-      subtotal * vatRate / 100,
-    );
-
-    // ------------------------------------------------------------
-    // Calcul TTC
-    // ------------------------------------------------------------
-
-    const amount = this.roundMoney(
-      subtotal + vatAmount,
-    );
-
-    // ------------------------------------------------------------
-    // Numéro de facture
-    // ------------------------------------------------------------
+    const amount =
+      this.roundMoney(
+        subtotal + vatAmount,
+      );
 
     const number =
       await this.generateInvoiceNumber();
-
-    // ------------------------------------------------------------
-    // Création
-    // ------------------------------------------------------------
 
     return this.prisma.invoice.create({
       data: {
@@ -141,22 +123,50 @@ export class InvoicesService {
         amount,
 
         invoiceItems: {
-          create: items.map((item) => ({
-            description: item.description,
+          create: items.map(
+            (item: any) => ({
+              description:
+                item.description,
 
-            quantity: Number(
-              item.quantity,
-            ),
+              quantity: Number(
+                item.quantity,
+              ),
 
-            unitPrice: Number(
-              item.unitPrice,
-            ),
+              unitPrice: Number(
+                item.unitPrice,
+              ),
 
-            total: this.roundMoney(
-              Number(item.quantity) *
-                Number(item.unitPrice),
-            ),
-          })),
+              vatRate: Number(
+                item.vatRate ??
+                  vatRate,
+              ),
+
+              vatAmount:
+                this.roundMoney(
+                  Number(
+                    item.quantity,
+                  ) *
+                    Number(
+                      item.unitPrice,
+                    ) *
+                    Number(
+                      item.vatRate ??
+                        vatRate,
+                    ) /
+                    100,
+                ),
+
+              total:
+                this.roundMoney(
+                  Number(
+                    item.quantity,
+                  ) *
+                    Number(
+                      item.unitPrice,
+                    ),
+                ),
+            }),
+          ),
         },
       },
 
@@ -174,27 +184,16 @@ export class InvoicesService {
     });
   }
 
-  /**
-   * ============================================================
-   * NUMÉRO DE FACTURE
-   * ============================================================
-   *
-   * Exemple :
-   *
-   * FAC-2026-000001
-   * FAC-2026-000002
-   * FAC-2026-000003
-   *
-   * IMPORTANT :
-   * Cette méthode est une première version.
-   * Pour une application avec beaucoup d'utilisateurs,
-   * il faudra idéalement gérer la séquence en base de données.
-   */
-  private async generateInvoiceNumber(): Promise<string> {
-    const year = new Date()
-      .getFullYear();
+  // ============================================================
+  // NUMÉRO DE FACTURE
+  // ============================================================
 
-    const prefix = `FAC-${year}-`;
+  private async generateInvoiceNumber(): Promise<string> {
+    const year =
+      new Date().getFullYear();
+
+    const prefix =
+      `FAC-${year}-`;
 
     const lastInvoice =
       await this.prisma.invoice.findFirst({
@@ -218,12 +217,16 @@ export class InvoicesService {
     if (lastInvoice?.number) {
       const lastSequence =
         Number(
-          lastInvoice.number
-            .replace(prefix, ''),
+          lastInvoice.number.replace(
+            prefix,
+            '',
+          ),
         );
 
       if (
-        Number.isFinite(lastSequence)
+        Number.isFinite(
+          lastSequence,
+        )
       ) {
         sequence =
           lastSequence + 1;
@@ -232,28 +235,32 @@ export class InvoicesService {
 
     return (
       prefix +
-      String(sequence).padStart(6, '0')
+      String(sequence).padStart(
+        6,
+        '0',
+      )
     );
   }
 
-  /**
-   * ============================================================
-   * ARRONDI MONÉTAIRE
-   * ============================================================
-   */
+  // ============================================================
+  // ARRONDI
+  // ============================================================
+
   private roundMoney(
     value: number,
   ): number {
-    return Math.round(
-      (value + Number.EPSILON) * 100,
-    ) / 100;
+    return (
+      Math.round(
+        (value + Number.EPSILON) *
+          100,
+      ) / 100
+    );
   }
 
-  /**
-   * ============================================================
-   * TOUTES LES FACTURES
-   * ============================================================
-   */
+  // ============================================================
+  // TOUTES LES FACTURES
+  // ============================================================
+
   async findAll(
     userId: string,
   ) {
@@ -282,11 +289,10 @@ export class InvoicesService {
     });
   }
 
-  /**
-   * ============================================================
-   * UNE FACTURE
-   * ============================================================
-   */
+  // ============================================================
+  // UNE FACTURE
+  // ============================================================
+
   async findOne(
     id: string,
     userId: string,
@@ -322,11 +328,10 @@ export class InvoicesService {
     return invoice;
   }
 
-  /**
-   * ============================================================
-   * MODIFIER UNE FACTURE
-   * ============================================================
-   */
+  // ============================================================
+  // MODIFIER
+  // ============================================================
+
   async update(
     id: string,
     userId: string,
@@ -337,10 +342,6 @@ export class InvoicesService {
         id,
         userId,
       );
-
-    // ----------------------------------------------------------
-    // Ne pas modifier une facture payée ou annulée
-    // ----------------------------------------------------------
 
     if (
       invoice.status ===
@@ -374,11 +375,10 @@ export class InvoicesService {
     });
   }
 
-  /**
-   * ============================================================
-   * SUPPRIMER UNE FACTURE
-   * ============================================================
-   */
+  // ============================================================
+  // SUPPRIMER
+  // ============================================================
+
   async remove(
     id: string,
     userId: string,
@@ -389,13 +389,9 @@ export class InvoicesService {
         userId,
       );
 
-    // ----------------------------------------------------------
-    // Protection
-    // ----------------------------------------------------------
-
     if (
       invoice.status ===
-        InvoiceStatus.PAID
+      InvoiceStatus.PAID
     ) {
       throw new BadRequestException(
         'Une facture payée ne peut pas être supprimée.',
@@ -409,11 +405,10 @@ export class InvoicesService {
     });
   }
 
-  /**
-   * ============================================================
-   * FACTURE COMPLÈTE POUR PDF
-   * ============================================================
-   */
+  // ============================================================
+  // FACTURE POUR PDF
+  // ============================================================
+
   async findOneForPdf(
     id: string,
     userId: string,
@@ -449,11 +444,10 @@ export class InvoicesService {
     return invoice;
   }
 
-  /**
-   * ============================================================
-   * CHANGEMENT DE STATUT
-   * ============================================================
-   */
+  // ============================================================
+  // CHANGER LE STATUT
+  // ============================================================
+
   async updateStatus(
     id: string,
     userId: string,
@@ -465,7 +459,6 @@ export class InvoicesService {
         userId,
       );
 
-    // Même statut
     if (
       invoice.status === status
     ) {
@@ -528,5 +521,36 @@ export class InvoicesService {
         },
       },
     });
+  }
+
+  // ============================================================
+  // VALIDATION E-INVOICE
+  // ============================================================
+
+  async validateForElectronicInvoicing(
+    id: string,
+    userId: string,
+  ) {
+    const invoice =
+      await this.findOne(
+        id,
+        userId,
+      );
+
+    const result =
+      this.complianceValidator.validate(
+        invoice,
+      );
+
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+
+      valid: result.valid,
+
+      errors: result.errors,
+
+      warnings: result.warnings,
+    };
   }
 }

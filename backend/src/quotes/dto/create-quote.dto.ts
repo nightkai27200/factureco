@@ -4,66 +4,59 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
-import {
-  Type,
-} from 'class-transformer';
-
+import { Type } from 'class-transformer';
 
 
 class CreateQuoteItemDto {
 
-
   @IsNotEmpty()
   @IsString()
-  description:string;
-
-
-
-  @Type(() => Number)
-  @IsNumber()
-  quantity:number;
-
+  description: string;
 
 
   @Type(() => Number)
   @IsNumber()
-  unitPrice:number;
+  @Min(0.01)
+  quantity: number;
 
 
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPrice: number;
 }
-
 
 
 export class CreateQuoteDto {
 
-
   @IsNotEmpty()
   @IsString()
-  title:string;
-
+  title: string;
 
 
   @IsOptional()
   @IsString()
-  description?:string;
-
+  description?: string;
 
 
   @IsNotEmpty()
   @IsString()
-  clientId:string;
-
+  clientId: string;
 
 
   @IsArray()
-  @ValidateNested({
-    each:true,
-  })
+  @ValidateNested({ each: true })
   @Type(() => CreateQuoteItemDto)
-  items:CreateQuoteItemDto[];
+  items: CreateQuoteItemDto[];
 
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  vatRate?: number;
 }

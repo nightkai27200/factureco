@@ -2,897 +2,914 @@
 
 import {
   useEffect,
-  useState
+  useState,
 } from "react";
-
-import { API_URL } from "@/lib/config";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 import {
+  deleteQuote,
   getQuotes,
-  createQuote,
-  Quote
+  Quote,
 } from "@/services/quote.service";
 
 
-import {
-  getClients,
-  Client
-} from "@/services/client.service";
+export default function DevisPage() {
 
-import api from "@/lib/api";
+  const [quotes, setQuotes] =
+    useState<Quote[]>([]);
 
+  const [loading, setLoading] =
+    useState(true);
 
-type Line = {
+  const [error, setError] =
+    useState("");
 
-  description:string;
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
 
-  quantity:number;
 
-  unitPrice:number;
+  // =========================================================
+  // CHARGER LES DEVIS
+  // =========================================================
 
-};
+  async function loadQuotes() {
 
+    try {
 
+      setLoading(true);
 
+      setError("");
 
-export default function DevisPage(){
+      const data =
+        await getQuotes();
 
+      setQuotes(data);
 
-const [quotes,setQuotes] =
-useState<Quote[]>([]);
+    } catch (err: any) {
 
+      console.error(
+        "Erreur chargement devis :",
+        err,
+      );
 
-const [clients,setClients] =
-useState<Client[]>([]);
+      setError(
+        err?.response?.data?.message ||
+        "Impossible de charger les devis.",
+      );
 
+    } finally {
 
+      setLoading(false);
 
-const [clientId,setClientId] =
-useState("");
-
-
-
-const [title,setTitle] =
-useState("");
-
-
-const [tva,setTva] =
-useState(20);
-
-
-
-const [lines,setLines] =
-useState<Line[]>([
-
-{
- description:"",
- quantity:1,
- unitPrice:0
-}
-
-]);
-
-
-
-
-
-async function loadData(){
-
-
-try{
-
-
-const q =
-await getQuotes();
-
-
-const c =
-await getClients();
-
-
-
-setQuotes(q);
-
-setClients(c);
-
-
-}
-
-catch(error){
-
-console.error(
-"Erreur chargement données",
-error
-);
-
-}
-
-
-}
-
-
-
-
-
-
-useEffect(()=>{
-
-
-loadData();
-
-
-},[]);
-
-
-
-
-
-
-
-
-function updateLine(
-index:number,
-field:keyof Line,
-value:any
-){
-
-
-const copy =
-[...lines];
-
-
-copy[index] = {
-
-...copy[index],
-
-[field]:value
-
-};
-
-
-setLines(copy);
-
-
-}
-
-
-
-
-
-
-function addLine(){
-
-
-setLines([
-
-...lines,
-
-{
-
-description:"",
-
-quantity:1,
-
-unitPrice:0
-
-}
-
-]);
-
-
-}
-
-
-
-
-
-
-function totalHT(){
-
-return lines.reduce(
-
-(sum,line)=>
-
-sum +
-
-line.quantity *
-
-line.unitPrice,
-
-0
-
-);
-
-}
-
-
-
-function montantTVA(){
-
-return totalHT() * (tva / 100);
-
-}
-
-
-
-function totalTTC(){
-
-return totalHT() + montantTVA();
-
-}
-
-
-
-
-
-
-
-async function saveQuote(){
-
-
-
-if(!clientId){
-
-alert(
-"Choisir un client"
-);
-
-return;
-
-}
-
-
-
-await createQuote({
-
-clientId,
-
-title,
-
-amount: totalTTC(),
-
-subtotal: totalHT(),
-
-vatRate: tva,
-
-vatAmount: montantTVA(),
-
-items:
-
-lines.map(line=>({
-
-description: line.description,
-
-quantity: line.quantity,
-
-unitPrice: line.unitPrice,
-
-total:
-line.quantity * line.unitPrice
-
-}))
-
-});
-
-
-
-alert(
-"Devis créé"
-);
-
-
-
-setTitle("");
-
-setLines([
-
-{
-description:"",
-quantity:1,
-unitPrice:0
-}
-
-]);
-
-
-
-loadData();
-
-
-
-}
-
-
-
-
-
-
-
-
-return (
-
-<ProtectedRoute>
-
-
-<main
-style={{
-padding:"40px"
-}}
->
-
-
-<h1>
-Devis
-</h1>
-
-
-
-<h2>
-Nouveau devis
-</h2>
-
-
-
-
-<select
-
-value={clientId}
-
-onChange={
-e=>setClientId(
-e.target.value
-)
-}
-
->
-
-
-<option value="">
-
-Choisir un client
-
-</option>
-
-
-
-{
-
-clients.map(client=>(
-
-
-<option
-
-key={client.id}
-
-value={client.id}
-
->
-
-{client.name}
-
-</option>
-
-
-))
-
-
-}
-
-
-
-</select>
-
-
-
-
-<br/><br/>
-
-
-
-
-
-<input
-
-placeholder="Titre du devis"
-
-value={title}
-
-onChange={
-e=>setTitle(
-e.target.value
-)
-}
-
-/>
-
-
-
-<label>
-  TVA :
-</label>
-
-<select
-  value={tva}
-  onChange={
-    e=>setTva(Number(e.target.value))
+    }
   }
->
 
-<option value={0}>
-  0 %
-</option>
 
-<option value={5.5}>
-  5.5 %
-</option>
+  // =========================================================
+  // CHARGEMENT INITIAL
+  // =========================================================
 
-<option value={10}>
-  10 %
-</option>
+  useEffect(() => {
 
-<option value={20}>
-  20 %
-</option>
+    loadQuotes();
 
-</select>
+  }, []);
 
 
+  // =========================================================
+  // FORMAT MONTANT
+  // =========================================================
 
+  function formatAmount(
+    amount: number | null | undefined,
+  ) {
 
+    const value =
+      Number(amount ?? 0);
 
-<h3>
-Lignes
-</h3>
+    return new Intl.NumberFormat(
+      "fr-FR",
+      {
+        style: "currency",
+        currency: "EUR",
+      },
+    ).format(value);
+  }
 
 
+  // =========================================================
+  // FORMAT DATE
+  // =========================================================
 
+  function formatDate(
+    date: string,
+  ) {
 
+    if (!date) {
+      return "";
+    }
 
-{
+    return new Intl.DateTimeFormat(
+      "fr-FR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      },
+    ).format(
+      new Date(date),
+    );
+  }
 
-lines.map((line,index)=>(
 
+  // =========================================================
+  // STATUT
+  // =========================================================
 
-<div
+  function formatStatus(
+    status: Quote["status"],
+  ) {
 
-key={index}
+    switch (status) {
 
-style={{
+      case "DRAFT":
+        return "Brouillon";
 
-display:"flex",
+      case "SENT":
+        return "Envoyé";
 
-gap:"10px",
+      case "ACCEPTED":
+        return "Accepté";
 
-marginBottom:"10px"
+      case "REFUSED":
+        return "Refusé";
 
-}}
+      case "CONVERTED":
+        return "Converti";
 
->
+      default:
+        return status;
+    }
+  }
 
 
+  // =========================================================
+  // COULEUR STATUT
+  // =========================================================
 
-<input
+  function statusStyle(
+    status: Quote["status"],
+  ) {
 
-placeholder="Description"
+    switch (status) {
 
-value={line.description}
+      case "DRAFT":
 
-onChange={
-e=>
+        return {
+          background: "#f3f4f6",
+          color: "#374151",
+        };
 
-updateLine(
+      case "SENT":
 
-index,
+        return {
+          background: "#dbeafe",
+          color: "#1d4ed8",
+        };
 
-"description",
+      case "ACCEPTED":
 
-e.target.value
+        return {
+          background: "#dcfce7",
+          color: "#15803d",
+        };
 
-)
+      case "REFUSED":
 
-}
+        return {
+          background: "#fee2e2",
+          color: "#b91c1c",
+        };
 
-/>
+      case "CONVERTED":
 
+        return {
+          background: "#ede9fe",
+          color: "#6d28d9",
+        };
 
+      default:
 
+        return {
+          background: "#f3f4f6",
+          color: "#374151",
+        };
+    }
+  }
 
 
-<input
+  // =========================================================
+  // SUPPRIMER
+  // =========================================================
 
-type="number"
+  async function handleDelete(
+    quote: Quote,
+  ) {
 
-value={line.quantity}
+    const confirmed =
+      window.confirm(
+        `Voulez-vous vraiment supprimer le devis ${quote.number} ?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
 
-onChange={
-e=>
-
-updateLine(
-
-index,
-
-"quantity",
-
-Number(
-e.target.value
-)
-
-)
-
-}
-
-/>
-
-
-
-
-
-<input
-
-type="number"
-
-value={line.unitPrice}
-
-onChange={
-e=>
-
-updateLine(
-
-index,
-
-"unitPrice",
-
-Number(
-e.target.value
-)
-
-)
-
-}
-
-/>
-
-
-
-
-</div>
-
-
-))
-
-
-}
-
-
-
-
-
-
-
-<button
-onClick={addLine}
->
-
-Ajouter une ligne
-
-</button>
-
-
-
-
-
-<h3>
-
-Total :
-
-{totalTTC().toFixed(2)} €
-
-</h3>
-
-
-
-
-
-<button
-onClick={saveQuote}
->
-
-Créer le devis
-
-</button>
-
-
-
-
-
-
-
-<hr/>
-
-
-
-
-
-
-<h2>
-Mes devis
-</h2>
-
-
-
-
-
-
-
-{
-
-quotes.map((q)=>(
-
-
-<div
-
-key={q.id}
-
-style={{
-
-border:"1px solid #ddd",
-
-padding:"15px",
-
-marginBottom:"10px",
-
-borderRadius:"8px"
-
-}}
-
->
-
-
-<p>
-
-<strong>
-
-{q.number}
-
-</strong>
-
-</p>
-
-
-
-
-<p>
-
-Statut :
-
-{q.status}
-
-</p>
-
-
-
-
-<p>
-
-Montant :
-
-{q.amount.toFixed(2)} €
-
-</p>
-
-
-
-
-
-<div
-
-style={{
-
-display:"flex",
-
-gap:"10px"
-
-}}
-
->
-
-
-
-
-<button
-
-onClick={async()=>{
-
-try{
-
-const token =
-localStorage.getItem("token");
-
-
-const response =
-await api.get<Blob>(
-
-`/quotes/${q.id}/pdf`,
-
-{
-
-headers:{
-
-Authorization:
-`Bearer ${token}`
-
-},
-
-responseType:"blob"
-
-}
-
-);
-
-
-
-const url =
-window.URL.createObjectURL(
-response.data
-);
-
-
-
-window.open(url);
-
-
-
-}
-
-catch(error){
-
-console.error(
-"Erreur PDF",
-error
-);
-
-
-alert(
-"Impossible de télécharger le PDF"
-);
-
-}
-
-
-}}
-
->
-
-📄 PDF
-
-</button>
-
-
-
-
-
-
-
-<button
-
-onClick={async()=>{
-
-try {
-
-await api.post(
-  `/quotes/${q.id}/convert`
-);
-
-
-alert(
-  "Devis transformé en facture"
-);
-
-
-loadData();
-
-
-}
-catch(error){
-
-console.error(
-  "Erreur conversion facture",
-  error
-);
-
-
-alert(
-  "Impossible de convertir le devis"
-);
-
-
-}
-
-}}
-
->
-
-🔄 Convertir
-
-</button>
-
-
-
-
-
-
-
-<button
-
-onClick={async()=>{
-
-
-await fetch(
-
-`${API_URL}/quotes/${q.id}`,
-
-{
-
-method:"DELETE",
-
-headers:{
-
-Authorization:
-
-`Bearer ${localStorage.getItem("token")}`
-
-}
-
-}
-
-);
-
-
-
-loadData();
-
-
-
-}}
-
->
-
-🗑 Supprimer
-
-</button>
-
-
-
-
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-))
-
-
-}
-
-
-
-
-
-</main>
-
-
-</ProtectedRoute>
-
-
-);
-
-
+      setDeletingId(
+        quote.id,
+      );
+
+      setError("");
+
+      await deleteQuote(
+        quote.id,
+      );
+
+      setQuotes(
+        current =>
+          current.filter(
+            item =>
+              item.id !== quote.id,
+          ),
+      );
+
+    } catch (err: any) {
+
+      console.error(
+        "Erreur suppression devis :",
+        err,
+      );
+
+      setError(
+        err?.response?.data?.message ||
+        "Impossible de supprimer le devis.",
+      );
+
+    } finally {
+
+      setDeletingId(null);
+
+    }
+  }
+
+
+  // =========================================================
+  // RENDU
+  // =========================================================
+
+  return (
+
+    <ProtectedRoute>
+
+      <main
+        style={{
+          minHeight: "100vh",
+          padding: "40px",
+          background: "#f8fafc",
+        }}
+      >
+
+        <div
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+
+          {/* ================================================= */}
+          {/* HEADER */}
+          {/* ================================================= */}
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "20px",
+              marginBottom: "30px",
+            }}
+          >
+
+            <div>
+
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "32px",
+                  fontWeight: 700,
+                }}
+              >
+                Devis
+              </h1>
+
+              <p
+                style={{
+                  marginTop: "8px",
+                  color: "#64748b",
+                }}
+              >
+                Gérez vos devis clients.
+              </p>
+
+            </div>
+
+
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href =
+                  "/devis/nouveau";
+              }}
+              style={{
+                padding: "12px 20px",
+                borderRadius: "8px",
+                border: "none",
+                background: "#111827",
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              + Nouveau devis
+            </button>
+
+          </div>
+
+
+          {/* ================================================= */}
+          {/* ERREUR */}
+          {/* ================================================= */}
+
+          {error && (
+
+            <div
+              style={{
+                padding: "15px 18px",
+                marginBottom: "20px",
+                borderRadius: "8px",
+                background: "#fee2e2",
+                color: "#991b1b",
+                border:
+                  "1px solid #fecaca",
+              }}
+            >
+              {error}
+            </div>
+
+          )}
+
+
+          {/* ================================================= */}
+          {/* LOADING */}
+          {/* ================================================= */}
+
+          {loading && (
+
+            <div
+              style={{
+                padding: "40px",
+                background: "#fff",
+                border:
+                  "1px solid #e2e8f0",
+                borderRadius: "12px",
+                textAlign: "center",
+              }}
+            >
+
+              <p>
+                Chargement des devis...
+              </p>
+
+            </div>
+
+          )}
+
+
+          {/* ================================================= */}
+          {/* AUCUN DEVIS */}
+          {/* ================================================= */}
+
+          {!loading &&
+            quotes.length === 0 && (
+
+              <div
+                style={{
+                  padding: "50px 30px",
+                  background: "#fff",
+                  border:
+                    "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  textAlign: "center",
+                }}
+              >
+
+                <h2
+                  style={{
+                    marginBottom: "10px",
+                  }}
+                >
+                  Aucun devis
+                </h2>
+
+                <p
+                  style={{
+                    color: "#64748b",
+                    marginBottom: "25px",
+                  }}
+                >
+                  Vous n'avez pas encore créé
+                  de devis.
+                </p>
+
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href =
+                      "/devis/nouveau";
+                  }}
+                  style={{
+                    padding:
+                      "11px 18px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background:
+                      "#111827",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Créer mon premier devis
+                </button>
+
+              </div>
+
+            )}
+
+
+          {/* ================================================= */}
+          {/* LISTE */}
+          {/* ================================================= */}
+
+          {!loading &&
+            quotes.length > 0 && (
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
+
+                {quotes.map(
+                  (quote) => {
+
+                    const status =
+                      statusStyle(
+                        quote.status,
+                      );
+
+                    return (
+
+                      <div
+                        key={quote.id}
+                        style={{
+                          background:
+                            "#fff",
+                          border:
+                            "1px solid #e2e8f0",
+                          borderRadius:
+                            "12px",
+                          padding:
+                            "22px",
+                        }}
+                      >
+
+                        {/* ================================= */}
+                        {/* TOP */}
+                        {/* ================================= */}
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            justifyContent:
+                              "space-between",
+                            alignItems:
+                              "flex-start",
+                            gap: "20px",
+                          }}
+                        >
+
+                          <div>
+
+                            <div
+                              style={{
+                                display:
+                                  "flex",
+                                alignItems:
+                                  "center",
+                                gap: "12px",
+                                marginBottom:
+                                  "8px",
+                              }}
+                            >
+
+                              <h2
+                                style={{
+                                  margin: 0,
+                                  fontSize:
+                                    "20px",
+                                }}
+                              >
+                                {quote.number}
+                              </h2>
+
+
+                              <span
+                                style={{
+                                  ...status,
+                                  padding:
+                                    "5px 10px",
+                                  borderRadius:
+                                    "999px",
+                                  fontSize:
+                                    "13px",
+                                  fontWeight:
+                                    600,
+                                }}
+                              >
+                                {formatStatus(
+                                  quote.status,
+                                )}
+                              </span>
+
+                            </div>
+
+
+                            {quote.client && (
+
+                              <p
+                                style={{
+                                  margin:
+                                    "5px 0",
+                                  fontWeight:
+                                    600,
+                                }}
+                              >
+                                {quote.client.name}
+                              </p>
+
+                            )}
+
+
+                            {quote.client
+                              ?.company && (
+
+                              <p
+                                style={{
+                                  margin:
+                                    "3px 0",
+                                  color:
+                                    "#64748b",
+                                }}
+                              >
+                                {
+                                  quote.client
+                                    .company
+                                }
+                              </p>
+
+                            )}
+
+
+                            {quote.title && (
+
+                              <p
+                                style={{
+                                  marginTop:
+                                    "10px",
+                                  color:
+                                    "#475569",
+                                }}
+                              >
+                                {quote.title}
+                              </p>
+
+                            )}
+
+                          </div>
+
+
+                          {/* ================================= */}
+                          {/* MONTANTS */}
+                          {/* ================================= */}
+
+                          <div
+                            style={{
+                              textAlign:
+                                "right",
+                              minWidth:
+                                "180px",
+                            }}
+                          >
+
+                            <p
+                              style={{
+                                margin: 0,
+                                color:
+                                  "#64748b",
+                                fontSize:
+                                  "13px",
+                              }}
+                            >
+                              TTC
+                            </p>
+
+                            <strong
+                              style={{
+                                display:
+                                  "block",
+                                marginTop:
+                                  "4px",
+                                fontSize:
+                                  "22px",
+                              }}
+                            >
+                              {formatAmount(
+                                quote.amount,
+                              )}
+                            </strong>
+
+                            <p
+                              style={{
+                                marginTop:
+                                  "6px",
+                                color:
+                                  "#64748b",
+                                fontSize:
+                                  "13px",
+                              }}
+                            >
+                              {formatDate(
+                                quote.createdAt,
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+
+                        {/* ================================= */}
+                        {/* MONTANTS DETAIL */}
+                        {/* ================================= */}
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            gap: "30px",
+                            flexWrap:
+                              "wrap",
+                            marginTop:
+                              "20px",
+                            paddingTop:
+                              "15px",
+                            borderTop:
+                              "1px solid #e5e7eb",
+                          }}
+                        >
+
+                          <div>
+
+                            <span
+                              style={{
+                                display:
+                                  "block",
+                                fontSize:
+                                  "12px",
+                                color:
+                                  "#64748b",
+                              }}
+                            >
+                              HT
+                            </span>
+
+                            <strong>
+                              {formatAmount(
+                                quote.subtotal,
+                              )}
+                            </strong>
+
+                          </div>
+
+
+                          <div>
+
+                            <span
+                              style={{
+                                display:
+                                  "block",
+                                fontSize:
+                                  "12px",
+                                color:
+                                  "#64748b",
+                              }}
+                            >
+                              TVA (
+                              {
+                                quote.vatRate
+                              }
+                              %)
+                            </span>
+
+                            <strong>
+                              {formatAmount(
+                                quote.vatAmount,
+                              )}
+                            </strong>
+
+                          </div>
+
+
+                          <div>
+
+                            <span
+                              style={{
+                                display:
+                                  "block",
+                                fontSize:
+                                  "12px",
+                                color:
+                                  "#64748b",
+                              }}
+                            >
+                              TTC
+                            </span>
+
+                            <strong>
+                              {formatAmount(
+                                quote.amount,
+                              )}
+                            </strong>
+
+                          </div>
+
+                        </div>
+
+
+                        {/* ================================= */}
+                        {/* ACTIONS */}
+                        {/* ================================= */}
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            gap: "10px",
+                            flexWrap:
+                              "wrap",
+                            marginTop:
+                              "20px",
+                          }}
+                        >
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.location.href =
+                                `/devis/${quote.id}`;
+                            }}
+                            style={{
+                              padding:
+                                "9px 14px",
+                              borderRadius:
+                                "7px",
+                              border:
+                                "1px solid #d1d5db",
+                              background:
+                                "#fff",
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            Voir
+                          </button>
+
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.location.href =
+                                `/devis/${quote.id}/modifier`;
+                            }}
+                            style={{
+                              padding:
+                                "9px 14px",
+                              borderRadius:
+                                "7px",
+                              border:
+                                "1px solid #d1d5db",
+                              background:
+                                "#fff",
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            Modifier
+                          </button>
+
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.location.href =
+                                `/devis/${quote.id}/pdf`;
+                            }}
+                            style={{
+                              padding:
+                                "9px 14px",
+                              borderRadius:
+                                "7px",
+                              border:
+                                "1px solid #d1d5db",
+                              background:
+                                "#fff",
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            PDF
+                          </button>
+
+
+                          <button
+                            type="button"
+                            disabled={
+                              deletingId ===
+                              quote.id
+                            }
+                            onClick={() =>
+                              handleDelete(
+                                quote,
+                              )
+                            }
+                            style={{
+                              padding:
+                                "9px 14px",
+                              borderRadius:
+                                "7px",
+                              border:
+                                "1px solid #fecaca",
+                              background:
+                                "#fff",
+                              color:
+                                "#dc2626",
+                              cursor:
+                                deletingId ===
+                                quote.id
+                                  ? "wait"
+                                  : "pointer",
+                            }}
+                          >
+                            {deletingId ===
+                            quote.id
+                              ? "Suppression..."
+                              : "Supprimer"}
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    );
+                  },
+                )}
+
+              </div>
+
+            )}
+
+        </div>
+
+      </main>
+
+    </ProtectedRoute>
+
+  );
 }

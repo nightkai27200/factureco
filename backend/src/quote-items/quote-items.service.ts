@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,307 +9,390 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuoteItemDto } from './dto/create-quote-item.dto';
 import { UpdateQuoteItemDto } from './dto/update-quote-item.dto';
 
-
 @Injectable()
 export class QuoteItemsService {
-
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
   ) {}
 
+  // =========================================================
+  // TVA AUTORISEE
+  // =========================================================
 
+  private readonly allowedVatRates = [
+    0,
+    5.5,
+    10,
+    20,
+  ];
 
-  // Créer une ligne de devis
+  // =========================================================
+  // CREER UNE LIGNE
+  // =========================================================
+
   async create(
-    createQuoteItemDto: CreateQuoteItemDto,
+    dto: CreateQuoteItemDto,
     userId: string,
   ) {
-
-
-    const quote = await this.prisma.quote.findFirst({
-
-      where: {
-        id: createQuoteItemDto.quoteId,
-        userId,
-      },
-
-    });
-
+    // Vérifier que le devis appartient bien à l'utilisateur
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id: dto.quoteId,
+          userId,
+        },
+      });
 
     if (!quote) {
-
       throw new NotFoundException(
-        'Quote not found',
+        'Devis introuvable.',
       );
-
     }
 
+    // Vérifier la description
+    if (
+      !dto.description ||
+      dto.description.trim().length === 0
+    ) {
+      throw new BadRequestException(
+        'La description est obligatoire.',
+      );
+    }
 
+    // Convertir en nombres
+    const quantity =
+      Number(dto.quantity);
 
+    const unitPrice =
+      Number(dto.unitPrice);
+
+    // Vérifier quantité
+    if (
+      !Number.isFinite(quantity) ||
+      quantity <= 0
+    ) {
+      throw new BadRequestException(
+        'La quantité doit être supérieure à 0.',
+      );
+    }
+
+    // Vérifier prix
+    if (
+      !Number.isFinite(unitPrice) ||
+      unitPrice < 0
+    ) {
+      throw new BadRequestException(
+        'Le prix unitaire est invalide.',
+      );
+    }
+
+    // Total ligne
     const total =
-      createQuoteItemDto.quantity *
-      createQuoteItemDto.unitPrice;
+      quantity *
+      unitPrice;
 
+    // Créer la ligne
+    const item =
+      await this.prisma.quoteItem.create({
+        data: {
+          description:
+            dto.description.trim(),
 
+          quantity,
 
-    const item = await this.prisma.quoteItem.create({
+          unitPrice,
 
-      data: {
+          total,
 
-        description: createQuoteItemDto.description,
+          quoteId:
+            dto.quoteId,
+        },
+      });
 
-        quantity: createQuoteItemDto.quantity,
-
-        unitPrice: createQuoteItemDto.unitPrice,
-
-        total,
-
-        quoteId: createQuoteItemDto.quoteId,
-
-      },
-
-    });
-
-
-
-    await this.updateQuoteAmount(
-      createQuoteItemDto.quoteId,
+    // Recalculer HT / TVA / TTC
+    await this.updateQuoteTotals(
+      dto.quoteId,
     );
 
-
+    // Retourner la ligne
     return item;
-
   }
 
+  // =========================================================
+  // TOUTES LES LIGNES D'UN DEVIS
+  // =========================================================
 
-
-
-
-  // Récupérer les lignes d'un devis
   async findAll(
     quoteId: string,
     userId: string,
   ) {
+    // Vérifier que le devis appartient
+    // à l'utilisateur connecté
+    const quote =
+      await this.prisma.quote.findFirst({
+        where: {
+          id: quoteId,
+          userId,
+        },
+      });
 
-
-    const quote = await this.prisma.quote.findFirst({
-
-      where:{
-        id: quoteId,
-        userId,
-      },
-
-    });
-
-
-
-    if(!quote){
-
+    if (!quote) {
       throw new NotFoundException(
-        'Quote not found',
+        'Devis introuvable.',
       );
-
     }
 
-
-
     return this.prisma.quoteItem.findMany({
-
-      where:{
+      where: {
         quoteId,
       },
 
+      orderBy: {
+        createdAt: 'asc',
+      },
     });
-
   }
 
+  // =========================================================
+  // UNE LIGNE
+  // =========================================================
 
-
-
-
-  // Récupérer une ligne
   async findOne(
     id: string,
     userId: string,
   ) {
+    const item =
+      await this.prisma.quoteItem.findFirst({
+        where: {
+          id,
 
-
-    const item = await this.prisma.quoteItem.findFirst({
-
-      where:{
-        id,
-
-        quote:{
-          userId,
+          quote: {
+            userId,
+          },
         },
+      });
 
-      },
-
-    });
-
-
-
-    if(!item){
-
+    if (!item) {
       throw new NotFoundException(
-        'Quote item not found',
+        'Ligne de devis introuvable.',
       );
-
     }
 
-
-
     return item;
-
   }
 
+  // =========================================================
+  // MODIFIER UNE LIGNE
+  // =========================================================
 
-
-
-
-  // Modifier une ligne
   async update(
     id: string,
-    updateQuoteItemDto: UpdateQuoteItemDto,
+    dto: UpdateQuoteItemDto,
     userId: string,
   ) {
+    // Vérifier que la ligne appartient
+    // au devis de l'utilisateur
+    const item =
+      await this.findOne(
+        id,
+        userId,
+      );
 
-
-    const item = await this.findOne(
-      id,
-      userId,
-    );
-
-
-
+    // Garder les anciennes valeurs
+    // si elles ne sont pas envoyées
     const quantity =
-      updateQuoteItemDto.quantity ??
-      item.quantity;
-
-
+      dto.quantity !== undefined
+        ? Number(dto.quantity)
+        : item.quantity;
 
     const unitPrice =
-      updateQuoteItemDto.unitPrice ??
-      item.unitPrice;
+      dto.unitPrice !== undefined
+        ? Number(dto.unitPrice)
+        : item.unitPrice;
 
+    const description =
+      dto.description !== undefined
+        ? dto.description.trim()
+        : item.description;
 
+    // Description
+    if (
+      !description ||
+      description.length === 0
+    ) {
+      throw new BadRequestException(
+        'La description est obligatoire.',
+      );
+    }
 
+    // Quantité
+    if (
+      !Number.isFinite(quantity) ||
+      quantity <= 0
+    ) {
+      throw new BadRequestException(
+        'La quantité doit être supérieure à 0.',
+      );
+    }
+
+    // Prix
+    if (
+      !Number.isFinite(unitPrice) ||
+      unitPrice < 0
+    ) {
+      throw new BadRequestException(
+        'Le prix unitaire est invalide.',
+      );
+    }
+
+    // Nouveau total
+    const total =
+      quantity *
+      unitPrice;
+
+    // Modifier la ligne
     const updated =
       await this.prisma.quoteItem.update({
-
-        where:{
+        where: {
           id,
         },
 
+        data: {
+          description,
 
-        data:{
+          quantity,
 
-          ...updateQuoteItemDto,
+          unitPrice,
 
-          total:
-            quantity * unitPrice,
-
+          total,
         },
-
       });
 
-
-
-    await this.updateQuoteAmount(
+    // Recalculer le devis
+    await this.updateQuoteTotals(
       item.quoteId,
     );
 
-
-
     return updated;
-
   }
 
+  // =========================================================
+  // SUPPRIMER UNE LIGNE
+  // =========================================================
 
-
-
-
-  // Supprimer une ligne
   async remove(
     id: string,
     userId: string,
   ) {
+    // Vérifier propriétaire
+    const item =
+      await this.findOne(
+        id,
+        userId,
+      );
 
-
-    const item = await this.findOne(
-      id,
-      userId,
-    );
-
-
-
+    // Supprimer
     const deleted =
       await this.prisma.quoteItem.delete({
-
-        where:{
+        where: {
           id,
         },
-
       });
 
-
-
-    await this.updateQuoteAmount(
+    // Recalculer le devis
+    await this.updateQuoteTotals(
       item.quoteId,
     );
 
-
-
     return deleted;
-
   }
 
+  // =========================================================
+  // RECALCUL HT / TVA / TTC
+  // =========================================================
 
-
-
-
-  // Recalcul du montant du devis
-  private async updateQuoteAmount(
+  private async updateQuoteTotals(
     quoteId: string,
   ) {
-
-
-    const items =
-      await this.prisma.quoteItem.findMany({
-
-        where:{
-          quoteId,
+    // Récupérer le devis
+    const quote =
+      await this.prisma.quote.findUnique({
+        where: {
+          id: quoteId,
         },
-
       });
 
+    if (!quote) {
+      throw new NotFoundException(
+        'Devis introuvable.',
+      );
+    }
 
+    // Récupérer les lignes
+    const items =
+      await this.prisma.quoteItem.findMany({
+        where: {
+          quoteId,
+        },
+      });
 
-    const amount =
+    // Calcul HT
+    const subtotal =
       items.reduce(
-
-        (total,item)=>
-          total + item.total,
-
+        (
+          sum: number,
+          item,
+        ) => {
+          return (
+            sum +
+            item.quantity *
+            item.unitPrice
+          );
+        },
         0,
-
       );
 
+    // TVA
+    const vatRate =
+      quote.vatRate ?? 20;
 
+    // Vérifier le taux
+    if (
+      !this.allowedVatRates.includes(
+        vatRate,
+      )
+    ) {
+      throw new BadRequestException(
+        'Taux de TVA invalide. Valeurs autorisées : 0, 5.5, 10, 20.',
+      );
+    }
 
+    // Montant TVA
+    const vatAmount =
+      subtotal *
+      vatRate /
+      100;
+
+    // TTC
+    const amount =
+      subtotal +
+      vatAmount;
+
+    // Mettre à jour le devis
     await this.prisma.quote.update({
-
-      where:{
-        id:quoteId,
+      where: {
+        id: quoteId,
       },
 
+      data: {
+        subtotal,
 
-      data:{
+        vatRate,
+
+        vatAmount,
+
         amount,
       },
-
     });
-
   }
-
 }

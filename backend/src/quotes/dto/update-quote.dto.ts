@@ -1,17 +1,45 @@
 import {
+  IsArray,
+  IsNumber,
   IsOptional,
   IsString,
-  IsNumber,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 
+import {
+  Type,
+} from 'class-transformer';
+
+
+// =========================================================
+// ITEM
+// =========================================================
+
+export class UpdateQuoteItemDto {
+
+  @IsString()
+  description: string;
+
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01)
+  quantity: number;
+
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPrice: number;
+}
+
+
+// =========================================================
+// UPDATE DEVIs
+// =========================================================
 
 export class UpdateQuoteDto {
-
-
-  @IsOptional()
-  @IsString()
-  number?: string;
-
 
   @IsOptional()
   @IsString()
@@ -24,8 +52,20 @@ export class UpdateQuoteDto {
 
 
   @IsOptional()
+  @IsString()
+  clientId?: string;
+
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateQuoteItemDto)
+  items?: UpdateQuoteItemDto[];
+
+
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  amount?: number;
-
-
+  @Min(0)
+  vatRate?: number;
 }

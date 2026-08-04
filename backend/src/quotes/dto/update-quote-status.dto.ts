@@ -7,12 +7,9 @@ import {
 } from '@prisma/client';
 
 
-
 export class UpdateQuoteStatusDto {
-
 
   @IsEnum(QuoteStatus)
   status: QuoteStatus;
-
 
 }

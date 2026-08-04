@@ -1,3 +1,4 @@
+
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
@@ -11,26 +12,25 @@ export class PdfService {
   // ============================================================
 
   private money(value: any): string {
-  const number = Number(value ?? 0);
 
-  if (!Number.isFinite(number)) {
-    return '0,00 €';
+    const number = Number(value ?? 0);
+
+    if (!Number.isFinite(number)) {
+      return '0,00 €';
+    }
+
+    return number
+      .toFixed(2)
+      .replace('.', ',')
+      .replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ' ',
+      ) + ' €';
   }
 
-  const formatted = number
-    .toFixed(2)
-    .replace('.', ',');
 
-  const [integerPart, decimalPart] = formatted.split(',');
-
-  const integerFormatted = integerPart.replace(
-    /\B(?=(\d{3})+(?!\d))/g,
-    ' ',
-  );
-
-  return `${integerFormatted},${decimalPart} €`;
-}
   private date(value: any): string {
+
     if (!value) {
       return '';
     }
@@ -41,101 +41,132 @@ export class PdfService {
       return '';
     }
 
-    return date.toLocaleDateString('fr-FR');
+    return date.toLocaleDateString(
+      'fr-FR',
+    );
   }
+
 
   private drawLine(
     doc: PDFKit.PDFDocument,
     y: number,
     color = '#e5e7eb',
   ) {
+
     doc
       .strokeColor(color)
-      .lineWidth(0.7)
-      .moveTo(50, y)
-      .lineTo(545, y)
+      .lineWidth(0.6)
+      .moveTo(40, y)
+      .lineTo(555, y)
       .stroke();
   }
+
 
   private drawFooter(
     doc: PDFKit.PDFDocument,
     company: any,
   ) {
-    const pageHeight = doc.page.height;
+
+    const pageHeight =
+      doc.page.height;
+
+    const footerY =
+      pageHeight - 38;
+
+    const companyFooter = [
+      company?.name,
+      company?.siret
+        ? `SIRET : ${company.siret}`
+        : '',
+      company?.vatNumber
+        ? `TVA : ${company.vatNumber}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' • ');
 
     doc
       .font('Helvetica')
-      .fontSize(8)
+      .fontSize(7)
       .fillColor('#6b7280')
       .text(
-        [
-          company?.name || '',
-          company?.siret
-            ? `SIRET : ${company.siret}`
-            : '',
-          company?.vatNumber
-            ? `TVA : ${company.vatNumber}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join(' • '),
-        50,
-        pageHeight - 55,
+        companyFooter,
+        40,
+        footerY,
         {
-          width: 495,
+          width: 515,
           align: 'center',
         },
       );
 
     doc
       .font('Helvetica')
-      .fontSize(8)
+      .fontSize(7)
       .fillColor('#9ca3af')
       .text(
         'Merci pour votre confiance.',
-        50,
-        pageHeight - 35,
+        40,
+        footerY + 12,
         {
-          width: 495,
+          width: 515,
           align: 'center',
         },
       );
   }
+
 
   private addLogo(
     doc: PDFKit.PDFDocument,
     company: any,
   ) {
+
     if (!company?.logo) {
-      return;
+      return false;
     }
 
     try {
-      const logoPath = path.join(
-        process.cwd(),
-        company.logo.replace(/^\/+/, ''),
-      );
 
-      if (fs.existsSync(logoPath)) {
+      const logoPath =
+        path.join(
+          process.cwd(),
+          company.logo.replace(
+            /^\/+/,
+            '',
+          ),
+        );
+
+      if (
+        fs.existsSync(
+          logoPath,
+        )
+      ) {
+
         doc.image(
           logoPath,
-          50,
-          45,
+          40,
+          38,
           {
-            fit: [80, 80],
+            fit: [75, 55],
           },
         );
+
+        return true;
       }
+
     } catch (error) {
+
       console.log(
         'Erreur logo PDF :',
         error,
       );
     }
+
+    return false;
   }
 
+
   // ============================================================
-  // EN-TÊTE TABLEAU
+  // TABLEAU
   // ============================================================
 
   private drawTableHeader(
@@ -144,9 +175,9 @@ export class PdfService {
     primary: string,
   ): number {
 
-    const tableX = 50;
-    const tableWidth = 495;
-    const headerHeight = 28;
+    const tableX = 40;
+    const tableWidth = 515;
+    const headerHeight = 24;
 
     doc
       .roundedRect(
@@ -160,24 +191,24 @@ export class PdfService {
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor('white');
 
     doc.text(
       'DESCRIPTION',
-      60,
-      y + 9,
+      50,
+      y + 8,
       {
-        width: 225,
+        width: 235,
       },
     );
 
     doc.text(
       'QTÉ',
-      290,
-      y + 9,
+      300,
+      y + 8,
       {
-        width: 45,
+        width: 40,
         align: 'center',
       },
     );
@@ -185,7 +216,7 @@ export class PdfService {
     doc.text(
       'PRIX HT',
       350,
-      y + 9,
+      y + 8,
       {
         width: 75,
         align: 'right',
@@ -195,34 +226,90 @@ export class PdfService {
     doc.text(
       'TOTAL HT',
       455,
-      y + 9,
+      y + 8,
       {
-        width: 80,
+        width: 90,
         align: 'right',
       },
     );
 
-    return y + headerHeight + 10;
+    return y + headerHeight + 5;
   }
+
+
+  // ============================================================
+  // CALCULS DEVIs
+  // ============================================================
+
+  private getQuoteSubtotal(
+    quote: any,
+  ): number {
+
+    return Number(
+      quote.subtotal ??
+      quote.amountHT ??
+      0,
+    );
+  }
+
+
+  private getQuoteVatRate(
+    quote: any,
+  ): number {
+
+    return Number(
+      quote.vatRate ??
+      quote.tva ??
+      0,
+    );
+  }
+
+
+  private getQuoteVatAmount(
+    quote: any,
+  ): number {
+
+    return Number(
+      quote.vatAmount ??
+      quote.amountTVA ??
+      0,
+    );
+  }
+
+
+  private getQuoteTotal(
+    quote: any,
+  ): number {
+
+    return Number(
+      quote.amount ??
+      0,
+    );
+  }
+
 
   // ============================================================
   // FACTURE
   // ============================================================
 
-  async generateInvoicePdf(invoice: any) {
+  async generateInvoicePdf(
+    invoice: any,
+  ) {
 
-    const doc = new PDFDocument({
-      size: 'A4',
-      margin: 50,
-      bufferPages: true,
-      info: {
-        Title: `Facture ${invoice.number || ''}`,
-        Author:
-          invoice.user?.company?.name ||
-          'FactureCo',
-        Subject: 'Facture',
-      },
-    });
+    const doc =
+      new PDFDocument({
+        size: 'A4',
+        margin: 40,
+        bufferPages: true,
+        info: {
+          Title:
+            `Facture ${invoice.number || ''}`,
+          Author:
+            invoice.user?.company?.name ||
+            'FactureCo',
+          Subject: 'Facture',
+        },
+      });
 
     const company =
       invoice.user?.company || {};
@@ -239,29 +326,31 @@ export class PdfService {
     const gray =
       '#6b7280';
 
+
     // ==========================================================
     // EN-TÊTE
     // ==========================================================
 
-    this.addLogo(
-      doc,
-      company,
-    );
+    const hasLogo =
+      this.addLogo(
+        doc,
+        company,
+      );
 
     const companyX =
-      company?.logo ? 150 : 50;
+      hasLogo ? 135 : 40;
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(18)
+      .fontSize(16)
       .fillColor(primary)
       .text(
         company?.name ||
           'Entreprise',
         companyX,
-        50,
+        42,
         {
-          width: 240,
+          width: 230,
         },
       );
 
@@ -274,14 +363,12 @@ export class PdfService {
       company?.phone
         ? `Tél. : ${company.phone}`
         : '',
-      company?.email
-        ? company.email
-        : '',
+      company?.email,
       company?.siret
         ? `SIRET : ${company.siret}`
         : '',
       company?.vatNumber
-        ? `TVA intracommunautaire : ${company.vatNumber}`
+        ? `TVA : ${company.vatNumber}`
         : '',
     ]
       .filter(Boolean)
@@ -289,90 +376,79 @@ export class PdfService {
 
     doc
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(dark)
       .text(
         companyDetails,
         companyX,
-        78,
+        64,
         {
           width: 250,
-          lineGap: 2,
+          lineGap: 1,
         },
       );
 
+
     // ==========================================================
-    // BLOC FACTURE
+    // TITRE FACTURE
     // ==========================================================
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(26)
+      .fontSize(24)
       .fillColor(primary)
       .text(
         'FACTURE',
         350,
-        50,
+        42,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(dark)
       .text(
         invoice.number || '',
         350,
-        84,
+        70,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
     doc
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(gray)
       .text(
-        `Date d'émission : ${this.date(
+        `Date : ${this.date(
           invoice.invoiceDate ||
           invoice.createdAt,
         )}`,
         350,
-        103,
+        85,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
-    if (invoice.dueDate) {
-      doc.text(
-        `Date d'échéance : ${this.date(
-          invoice.dueDate,
-        )}`,
-        350,
-        118,
-        {
-          width: 195,
-          align: 'right',
-        },
-      );
-    }
 
     // ==========================================================
-    // SÉPARATION
+    // LIGNE
     // ==========================================================
 
     this.drawLine(
       doc,
-      150,
+      115,
       primary,
     );
+
 
     // ==========================================================
     // CLIENT
@@ -380,15 +456,16 @@ export class PdfService {
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(primary)
       .text(
         'FACTURÉ À',
-        50,
-        175,
+        40,
+        130,
       );
 
     const clientDetails = [
+      client?.company,
       client?.name,
       client?.address,
       client?.postalCode &&
@@ -403,7 +480,7 @@ export class PdfService {
         ? `SIRET : ${client.siret}`
         : '',
       client?.vatNumber
-        ? `TVA intracommunautaire : ${client.vatNumber}`
+        ? `TVA : ${client.vatNumber}`
         : '',
     ]
       .filter(Boolean)
@@ -411,38 +488,41 @@ export class PdfService {
 
     doc
       .font('Helvetica')
-      .fontSize(10)
+      .fontSize(8)
       .fillColor(dark)
       .text(
         clientDetails,
-        50,
-        195,
+        40,
+        147,
         {
           width: 250,
-          lineGap: 3,
+          lineGap: 1,
         },
       );
+
 
     // ==========================================================
     // TABLEAU
     // ==========================================================
 
-    let y = 285;
+    let y = 235;
 
-    y = this.drawTableHeader(
-      doc,
-      y,
-      primary,
-    );
-
-    const tableX = 50;
-    const tableWidth = 495;
+    y =
+      this.drawTableHeader(
+        doc,
+        y,
+        primary,
+      );
 
     const items =
-      invoice.invoiceItems || [];
+      invoice.invoiceItems ||
+      [];
 
     items.forEach(
-      (item: any, index: number) => {
+      (
+        item: any,
+        index: number,
+      ) => {
 
         const description =
           String(
@@ -462,90 +542,84 @@ export class PdfService {
         const total =
           Number(
             item.total ??
-            quantity * unitPrice,
+            quantity *
+            unitPrice,
           );
-
-        // IMPORTANT :
-        // fontSize n'est PAS mis dans heightOfString().
-        // On définit d'abord la police et sa taille.
 
         doc
           .font('Helvetica')
-          .fontSize(9);
+          .fontSize(8);
 
         const descriptionHeight =
           doc.heightOfString(
             description,
             {
-              width: 220,
-              lineGap: 3,
+              width: 235,
+              lineGap: 1,
             },
           );
 
         const rowHeight =
           Math.max(
-            28,
-            descriptionHeight + 12,
+            21,
+            descriptionHeight + 7,
           );
 
-        // ======================================================
-        // NOUVELLE PAGE
-        // ======================================================
 
         if (
-          y + rowHeight > 700
+          y + rowHeight >
+          685
         ) {
+
           doc.addPage();
 
-          y = 60;
+          y = 45;
 
-          y = this.drawTableHeader(
-            doc,
-            y,
-            primary,
-          );
+          y =
+            this.drawTableHeader(
+              doc,
+              y,
+              primary,
+            );
         }
 
-        // ======================================================
-        // FOND ALTERNÉ
-        // ======================================================
 
-        if (index % 2 === 0) {
+        if (
+          index % 2 === 0
+        ) {
+
           doc
             .rect(
-              tableX,
-              y - 5,
-              tableWidth,
+              40,
+              y - 3,
+              515,
               rowHeight,
             )
             .fill('#f9fafb');
         }
 
-        // ======================================================
-        // CONTENU LIGNE
-        // ======================================================
 
         doc
           .font('Helvetica')
-          .fontSize(9)
+          .fontSize(8)
           .fillColor(dark);
 
         doc.text(
           description,
-          60,
+          50,
           y,
           {
-            width: 220,
-            lineGap: 3,
+            width: 235,
+            lineGap: 1,
           },
         );
 
         doc.text(
           quantity.toString(),
-          290,
+          300,
           y,
           {
-            width: 45,
+            width: 40,
             align: 'center',
           },
         );
@@ -565,7 +639,7 @@ export class PdfService {
           455,
           y,
           {
-            width: 80,
+            width: 90,
             align: 'right',
           },
         );
@@ -574,38 +648,40 @@ export class PdfService {
 
         this.drawLine(
           doc,
-          y - 2,
+          y - 1,
         );
       },
     );
+
 
     // ==========================================================
     // TOTAUX
     // ==========================================================
 
-    y += 25;
+    y += 10;
 
-    // Si les totaux sont trop bas,
-    // on crée une nouvelle page.
+    if (
+      y + 100 >
+      700
+    ) {
 
-    if (y > 650) {
       doc.addPage();
-      y = 60;
+
+      y = 45;
     }
 
-    const totalsX = 335;
-    const totalsWidth = 210;
+    const totalsX = 350;
 
     doc
       .font('Helvetica')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(dark)
       .text(
         'Total HT',
         totalsX,
         y,
         {
-          width: 90,
+          width: 80,
         },
       );
 
@@ -616,12 +692,12 @@ export class PdfService {
       445,
       y,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
-    y += 20;
+    y += 17;
 
     doc.text(
       `TVA ${Number(
@@ -630,7 +706,7 @@ export class PdfService {
       totalsX,
       y,
       {
-        width: 90,
+        width: 80,
       },
     );
 
@@ -641,33 +717,33 @@ export class PdfService {
       445,
       y,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
-    y += 25;
+    y += 22;
 
     doc
       .roundedRect(
-        totalsX - 10,
-        y - 5,
-        totalsWidth + 10,
-        38,
+        totalsX - 8,
+        y - 4,
+        213,
+        32,
         5,
       )
       .fill(primary);
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(13)
+      .fontSize(11)
       .fillColor('white')
       .text(
         'TOTAL TTC',
         totalsX,
-        y + 7,
+        y + 6,
         {
-          width: 100,
+          width: 90,
         },
       );
 
@@ -675,198 +751,172 @@ export class PdfService {
       this.money(
         invoice.amount,
       ),
-      435,
-      y + 7,
+      440,
+      y + 6,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
+
     // ==========================================================
-    // INFORMATIONS DE PAIEMENT
+    // CONDITIONS FACTURE
     // ==========================================================
 
-    y += 65;
+    y += 45;
 
-    if (y > 650) {
+    if (
+      y + 80 >
+      700
+    ) {
+
       doc.addPage();
-      y = 60;
+
+      y = 45;
     }
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(primary)
       .text(
         'CONDITIONS DE RÈGLEMENT',
-        50,
+        40,
         y,
       );
 
-    y += 20;
+    y += 15;
 
     doc
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(dark);
 
-    if (invoice.paymentMethod) {
+    if (
+      invoice.paymentMethod
+    ) {
 
       doc.text(
         `Mode de paiement : ${invoice.paymentMethod}`,
-        50,
+        40,
         y,
         {
-          width: 495,
+          width: 515,
         },
       );
 
-      y += 16;
+      y += 14;
     }
 
-    if (invoice.dueDate) {
+    if (
+      invoice.dueDate
+    ) {
 
       doc.text(
-        `Date limite de paiement : ${this.date(
+        `Date limite : ${this.date(
           invoice.dueDate,
         )}`,
-        50,
+        40,
         y,
         {
-          width: 495,
+          width: 515,
         },
       );
 
-      y += 16;
+      y += 14;
     }
 
-    if (invoice.paymentTerms) {
-
-      const paymentTerms =
-        String(invoice.paymentTerms);
-
-      doc
-        .font('Helvetica')
-        .fontSize(9);
-
-      const paymentTermsHeight =
-        doc.heightOfString(
-          paymentTerms,
-          {
-            width: 495,
-            lineGap: 3,
-          },
-        );
+    if (
+      invoice.paymentTerms
+    ) {
 
       doc.text(
-        paymentTerms,
-        50,
+        String(
+          invoice.paymentTerms,
+        ),
+        40,
         y,
         {
-          width: 495,
-          lineGap: 3,
+          width: 515,
+          lineGap: 1,
         },
       );
-
-      y += paymentTermsHeight + 10;
     }
 
+
     // ==========================================================
-    // MENTIONS LÉGALES
+    // MENTIONS
     // ==========================================================
 
-    y += 12;
+    y += 25;
 
-    if (y > 680) {
+    if (
+      y + 70 >
+      700
+    ) {
+
       doc.addPage();
-      y = 60;
+
+      y = 45;
     }
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(primary)
       .text(
         'MENTIONS',
-        50,
+        40,
         y,
       );
 
-    y += 17;
+    y += 14;
 
-    const legalLines: string[] = [];
-
-    legalLines.push(
+    const legalLines = [
       'En cas de retard de paiement, des pénalités de retard sont exigibles conformément à la réglementation en vigueur.',
-    );
-
-    legalLines.push(
       'Indemnité forfaitaire pour frais de recouvrement : 40 €.',
-    );
+    ];
 
     if (
-      Number(invoice.vatRate) === 0
+      Number(
+        invoice.vatRate,
+      ) === 0
     ) {
+
       legalLines.push(
         'TVA non applicable selon le régime applicable à l’entreprise, si celui-ci le justifie.',
       );
     }
 
-    if (invoice.notes) {
+    if (
+      invoice.notes
+    ) {
+
       legalLines.push(
-        String(invoice.notes),
+        String(
+          invoice.notes,
+        ),
       );
     }
-
-    const legalText =
-      legalLines.join('\n');
 
     doc
       .font('Helvetica')
-      .fontSize(8.5)
-      .fillColor(gray);
-
-    const legalHeight =
-      doc.heightOfString(
-        legalText,
+      .fontSize(7.5)
+      .fillColor(gray)
+      .text(
+        legalLines.join('\n'),
+        40,
+        y,
         {
-          width: 495,
-          lineGap: 4,
+          width: 515,
+          lineGap: 1,
         },
       );
 
-    // Si les mentions ne tiennent pas,
-    // on les place sur une nouvelle page.
-
-    if (
-      y + legalHeight > 700
-    ) {
-      doc.addPage();
-      y = 60;
-    }
-
-    doc.text(
-      legalText,
-      50,
-      y,
-      {
-        width: 495,
-        lineGap: 4,
-      },
-    );
 
     // ==========================================================
-    // FOOTER
-    // ==========================================================
-
-    this.drawFooter(
-      doc,
-      company,
-    );
-
-    // ==========================================================
-    // NUMÉROS DE PAGE
+    // FOOTER + NUMÉROS
     // ==========================================================
 
     const range =
@@ -874,22 +924,31 @@ export class PdfService {
 
     for (
       let i = range.start;
-      i < range.start + range.count;
+      i <
+      range.start +
+      range.count;
       i++
     ) {
 
       doc.switchToPage(i);
 
+      this.drawFooter(
+        doc,
+        company,
+      );
+
       doc
         .font('Helvetica')
-        .fontSize(8)
+        .fontSize(7)
         .fillColor('#9ca3af')
         .text(
-          `Page ${i + 1 - range.start} / ${range.count}`,
-          50,
-          doc.page.height - 22,
+          `Page ${
+            i + 1 - range.start
+          } / ${range.count}`,
+          40,
+          doc.page.height - 18,
           {
-            width: 495,
+            width: 515,
             align: 'right',
           },
         );
@@ -900,24 +959,38 @@ export class PdfService {
     return doc;
   }
 
+
   // ============================================================
   // DEVIS
   // ============================================================
 
-  async generateQuotePdf(quote: any) {
+  async generateQuotePdf(
+    quote: any,
+  ) {
 
-    const doc = new PDFDocument({
-      size: 'A4',
-      margin: 50,
-      bufferPages: true,
-      info: {
-        Title: `Devis ${quote.number || ''}`,
-        Author:
-          quote.user?.company?.name ||
-          'FactureCo',
-        Subject: 'Devis',
-      },
-    });
+    const doc =
+      new PDFDocument({
+        size: 'A4',
+
+        // IMPORTANT :
+        // Marges réduites pour maximiser
+        // la zone disponible.
+        margin: 40,
+
+        bufferPages: true,
+
+        info: {
+          Title:
+            `Devis ${quote.number || ''}`,
+
+          Author:
+            quote.user?.company?.name ||
+            'FactureCo',
+
+          Subject: 'Devis',
+        },
+      });
+
 
     const company =
       quote.user?.company || {};
@@ -934,124 +1007,139 @@ export class PdfService {
     const gray =
       '#6b7280';
 
+
     // ==========================================================
     // EN-TÊTE
     // ==========================================================
 
-    this.addLogo(
-      doc,
-      company,
-    );
+    const hasLogo =
+      this.addLogo(
+        doc,
+        company,
+      );
 
     const companyX =
-      company?.logo ? 150 : 50;
+      hasLogo ? 135 : 40;
+
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(18)
+      .fontSize(16)
       .fillColor(primary)
       .text(
         company?.name ||
           'Entreprise',
         companyX,
-        50,
+        42,
         {
-          width: 240,
+          width: 230,
         },
       );
 
+
     const companyDetails = [
       company?.address,
+
       company?.postalCode &&
       company?.city
         ? `${company.postalCode} ${company.city}`
         : company?.city,
+
       company?.phone
         ? `Tél. : ${company.phone}`
         : '',
+
       company?.email || '',
+
       company?.siret
         ? `SIRET : ${company.siret}`
         : '',
+
       company?.vatNumber
-        ? `TVA intracommunautaire : ${company.vatNumber}`
+        ? `TVA : ${company.vatNumber}`
         : '',
     ]
       .filter(Boolean)
       .join('\n');
 
+
     doc
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(dark)
       .text(
         companyDetails,
         companyX,
-        78,
+        64,
         {
           width: 250,
-          lineGap: 2,
+          lineGap: 1,
         },
       );
 
+
     // ==========================================================
-    // TITRE
+    // TITRE DEVIS
     // ==========================================================
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(26)
+      .fontSize(25)
       .fillColor(primary)
       .text(
         'DEVIS',
         350,
-        50,
+        42,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
+
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(dark)
       .text(
         quote.number || '',
         350,
-        84,
+        71,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
+
     doc
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .fillColor(gray)
       .text(
-        `Date d'émission : ${this.date(
+        `Date : ${this.date(
           quote.quoteDate ||
           quote.createdAt,
         )}`,
         350,
-        103,
+        86,
         {
-          width: 195,
+          width: 205,
           align: 'right',
         },
       );
 
+
     // ==========================================================
-    // SÉPARATION
+    // LIGNE
     // ==========================================================
 
     this.drawLine(
       doc,
-      150,
+      115,
       primary,
     );
+
 
     // ==========================================================
     // CLIENT
@@ -1059,273 +1147,339 @@ export class PdfService {
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(primary)
       .text(
         'CLIENT',
-        50,
-        175,
+        40,
+        130,
       );
 
+
     const clientDetails = [
+      client?.company,
+
       client?.name,
+
       client?.address,
+
       client?.postalCode &&
       client?.city
         ? `${client.postalCode} ${client.city}`
         : client?.city,
+
       client?.email,
+
       client?.phone
         ? `Tél. : ${client.phone}`
         : '',
+
       client?.siret
         ? `SIRET : ${client.siret}`
         : '',
+
       client?.vatNumber
-        ? `TVA intracommunautaire : ${client.vatNumber}`
+        ? `TVA : ${client.vatNumber}`
         : '',
     ]
       .filter(Boolean)
       .join('\n');
 
+
     doc
       .font('Helvetica')
-      .fontSize(10)
+      .fontSize(8)
       .fillColor(dark)
       .text(
         clientDetails,
-        50,
-        195,
+        40,
+        147,
         {
           width: 250,
-          lineGap: 3,
+          lineGap: 1,
         },
       );
 
+
     // ==========================================================
-    // OBJET DU DEVIS
+    // OBJET
     // ==========================================================
 
-    let y = 275;
+    let y = 215;
+
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(9)
+      .fillColor(primary)
+      .text(
+        'OBJET DU DEVIS',
+        40,
+        y,
+      );
+
+
+    y += 15;
+
+
+    const quoteTitle =
+      String(
+        quote.title || '',
+      );
+
 
     doc
       .font('Helvetica-Bold')
       .fontSize(10)
-      .fillColor(primary)
-      .text(
-        'OBJET DU DEVIS',
-        50,
-        y,
-      );
-
-    y += 20;
-
-    const quoteTitle =
-      String(quote.title || '');
-
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(11)
       .fillColor(dark);
+
 
     const titleHeight =
       doc.heightOfString(
         quoteTitle,
         {
-          width: 495,
+          width: 515,
+          lineGap: 1,
         },
       );
+
 
     doc.text(
       quoteTitle,
-      50,
+      40,
       y,
       {
-        width: 495,
+        width: 515,
+        lineGap: 1,
       },
     );
 
-    y += titleHeight + 10;
+
+    y +=
+      titleHeight + 4;
+
 
     // ==========================================================
-    // DESCRIPTION DU DEVIS
+    // DESCRIPTION
     // ==========================================================
 
-    if (quote.description) {
+    if (
+      quote.description
+    ) {
 
-      const quoteDescription =
-        String(quote.description);
+      const description =
+        String(
+          quote.description,
+        );
 
-      // IMPORTANT :
-      // On définit la police AVANT heightOfString().
+
       doc
         .font('Helvetica')
-        .fontSize(9)
+        .fontSize(8)
         .fillColor(gray);
+
 
       const descriptionHeight =
         doc.heightOfString(
-          quoteDescription,
+          description,
           {
-            width: 495,
-            lineGap: 3,
+            width: 515,
+            lineGap: 1,
           },
         );
 
-      // Vérification pagination
-      if (
-        y + descriptionHeight > 690
-      ) {
-        doc.addPage();
-        y = 60;
-      }
 
+      // La description ne doit pas
+      // déclencher automatiquement
+      // une page.
       doc.text(
-        quoteDescription,
-        50,
+        description,
+        40,
         y,
         {
-          width: 495,
-          lineGap: 3,
+          width: 515,
+          lineGap: 1,
         },
       );
 
-      y += descriptionHeight + 15;
+
+      y +=
+        descriptionHeight + 7;
     }
+
 
     // ==========================================================
     // TABLEAU
     // ==========================================================
 
-    const tableX = 50;
-    const tableWidth = 495;
+    // On réserve suffisamment de place
+    // mais on ne crée PAS de page
+    // artificiellement.
 
-    // Protection si la description est longue
-    if (y > 680) {
-      doc.addPage();
-      y = 60;
+    if (
+      y < 245
+    ) {
+      y = 245;
     }
 
-    y = this.drawTableHeader(
-      doc,
-      y,
-      primary,
-    );
+
+    y =
+      this.drawTableHeader(
+        doc,
+        y,
+        primary,
+      );
+
 
     const items =
-      quote.quoteItems || [];
+      quote.quoteItems ||
+      quote.items ||
+      [];
+
+
+    // ==========================================================
+    // LIGNES
+    // ==========================================================
 
     items.forEach(
-      (item: any, index: number) => {
+      (
+        item: any,
+        index: number,
+      ) => {
 
         const description =
           String(
             item.description || '',
           );
 
+
         const quantity =
           Number(
             item.quantity || 0,
           );
+
 
         const unitPrice =
           Number(
             item.unitPrice || 0,
           );
 
+
         const total =
           Number(
             item.total ??
-            quantity * unitPrice,
+            quantity *
+            unitPrice,
           );
 
-        // ======================================================
-        // CALCUL HAUTEUR DESCRIPTION
-        // ======================================================
 
         doc
           .font('Helvetica')
-          .fontSize(9);
+          .fontSize(8);
+
 
         const descriptionHeight =
           doc.heightOfString(
             description,
             {
-              width: 220,
-              lineGap: 3,
+              width: 235,
+              lineGap: 1,
             },
           );
 
+
         const rowHeight =
           Math.max(
-            28,
-            descriptionHeight + 12,
+            21,
+            descriptionHeight + 7,
           );
 
-        // ======================================================
-        // NOUVELLE PAGE
-        // ======================================================
+
+        // ------------------------------------------------------
+        // NOUVELLE PAGE SEULEMENT SI LE TABLEAU DÉBORDE
+        // ------------------------------------------------------
 
         if (
-          y + rowHeight > 700
+          y + rowHeight >
+          685
         ) {
+
           doc.addPage();
 
-          y = 60;
+          y = 45;
 
-          y = this.drawTableHeader(
-            doc,
-            y,
-            primary,
-          );
+          y =
+            this.drawTableHeader(
+              doc,
+              y,
+              primary,
+            );
         }
 
-        // ======================================================
-        // FOND ALTERNÉ
-        // ======================================================
 
-        if (index % 2 === 0) {
+        // ------------------------------------------------------
+        // ALTERNANCE
+        // ------------------------------------------------------
+
+        if (
+          index % 2 === 0
+        ) {
+
           doc
             .rect(
-              tableX,
-              y - 5,
-              tableWidth,
+              40,
+              y - 3,
+              515,
               rowHeight,
             )
             .fill('#f9fafb');
         }
 
-        // ======================================================
-        // TEXTE
-        // ======================================================
+
+        // ------------------------------------------------------
+        // DESCRIPTION
+        // ------------------------------------------------------
 
         doc
           .font('Helvetica')
-          .fontSize(9)
+          .fontSize(8)
           .fillColor(dark);
+
 
         doc.text(
           description,
-          60,
+          50,
           y,
           {
-            width: 220,
-            lineGap: 3,
+            width: 235,
+            lineGap: 1,
           },
         );
 
+
+        // ------------------------------------------------------
+        // QUANTITÉ
+        // ------------------------------------------------------
+
         doc.text(
           quantity.toString(),
-          290,
+          300,
           y,
           {
-            width: 45,
+            width: 40,
             align: 'center',
           },
         );
 
+
+        // ------------------------------------------------------
+        // PRIX
+        // ------------------------------------------------------
+
         doc.text(
-          this.money(unitPrice),
+          this.money(
+            unitPrice,
+          ),
           350,
           y,
           {
@@ -1334,232 +1488,320 @@ export class PdfService {
           },
         );
 
+
+        // ------------------------------------------------------
+        // TOTAL
+        // ------------------------------------------------------
+
         doc.text(
-          this.money(total),
+          this.money(
+            total,
+          ),
           455,
           y,
           {
-            width: 80,
+            width: 90,
             align: 'right',
           },
         );
 
-        y += rowHeight;
+
+        y +=
+          rowHeight;
+
 
         this.drawLine(
           doc,
-          y - 2,
+          y - 1,
         );
       },
     );
+
 
     // ==========================================================
     // TOTAUX
     // ==========================================================
 
-    y += 25;
+    y += 10;
 
-    if (y > 650) {
+
+    // Si le tableau arrive trop bas,
+    // on garde les totaux ensemble.
+
+    if (
+      y + 95 >
+      700
+    ) {
+
       doc.addPage();
-      y = 60;
+
+      y = 45;
     }
 
-    const totalsX = 335;
-    const totalsWidth = 210;
+
+    const totalsX =
+      350;
+
+
+    const subtotal =
+      this.getQuoteSubtotal(
+        quote,
+      );
+
+
+    const vatRate =
+      this.getQuoteVatRate(
+        quote,
+      );
+
+
+    const vatAmount =
+      this.getQuoteVatAmount(
+        quote,
+      );
+
+
+    const total =
+      this.getQuoteTotal(
+        quote,
+      );
+
+
+    // ----------------------------------------------------------
+    // HT
+    // ----------------------------------------------------------
 
     doc
       .font('Helvetica')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(dark)
       .text(
         'Total HT',
         totalsX,
         y,
         {
-          width: 90,
+          width: 80,
         },
       );
 
+
     doc.text(
       this.money(
-        quote.amountHT,
+        subtotal,
       ),
       445,
       y,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
-    y += 20;
+
+    y += 17;
+
+
+    // ----------------------------------------------------------
+    // TVA
+    // ----------------------------------------------------------
 
     doc.text(
-      `TVA ${Number(
-        quote.tva || 0,
-      )}%`,
+      `TVA ${vatRate}%`,
       totalsX,
       y,
       {
-        width: 90,
+        width: 80,
       },
     );
 
+
     doc.text(
       this.money(
-        quote.amountTVA,
+        vatAmount,
       ),
       445,
       y,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
-    y += 25;
+
+    y += 21;
+
+
+    // ----------------------------------------------------------
+    // TTC
+    // ----------------------------------------------------------
 
     doc
       .roundedRect(
-        totalsX - 10,
-        y - 5,
-        totalsWidth + 10,
-        38,
+        totalsX - 8,
+        y - 4,
+        213,
+        32,
         5,
       )
       .fill(primary);
 
+
     doc
       .font('Helvetica-Bold')
-      .fontSize(13)
+      .fontSize(11)
       .fillColor('white')
       .text(
         'TOTAL TTC',
         totalsX,
-        y + 7,
+        y + 6,
         {
-          width: 100,
+          width: 90,
         },
       );
 
+
     doc.text(
       this.money(
-        quote.amount,
+        total,
       ),
-      435,
-      y + 7,
+      440,
+      y + 6,
       {
-        width: 100,
+        width: 110,
         align: 'right',
       },
     );
 
+
     // ==========================================================
-    // CONDITIONS DU DEVIS
+    // CONDITIONS
     // ==========================================================
 
-    y += 65;
+    y += 43;
 
-    if (y > 650) {
+
+    if (
+      y + 90 >
+      700
+    ) {
+
       doc.addPage();
-      y = 60;
+
+      y = 45;
     }
+
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(primary)
       .text(
         'CONDITIONS',
-        50,
+        40,
         y,
       );
 
-    y += 20;
+
+    y += 15;
+
+
+    doc
+      .font('Helvetica')
+      .fontSize(8)
+      .fillColor(dark);
+
 
     const conditionsText =
       'Ce devis est valable pendant 30 jours à compter de sa date d’émission.';
 
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor(dark);
-
-    const conditionsHeight =
-      doc.heightOfString(
-        conditionsText,
-        {
-          width: 495,
-        },
-      );
 
     doc.text(
       conditionsText,
-      50,
+      40,
       y,
       {
-        width: 495,
+        width: 515,
       },
     );
 
-    y += conditionsHeight + 20;
+
+    y += 17;
+
 
     doc.text(
       'Bon pour accord :',
-      50,
+      40,
       y,
     );
 
-    y += 35;
+
+    y += 24;
+
 
     doc
       .strokeColor('#9ca3af')
       .lineWidth(0.7)
-      .moveTo(50, y)
-      .lineTo(280, y)
+      .moveTo(
+        40,
+        y,
+      )
+      .lineTo(
+        230,
+        y,
+      )
       .stroke();
 
-    // ==========================================================
-    // FOOTER
-    // ==========================================================
-
-    this.drawFooter(
-      doc,
-      company,
-    );
 
     // ==========================================================
-    // NUMÉROS DE PAGE
+    // FOOTER + NUMÉROS DE PAGE
     // ==========================================================
 
     const range =
       doc.bufferedPageRange();
 
+
     for (
       let i = range.start;
-      i < range.start + range.count;
+      i <
+      range.start +
+      range.count;
       i++
     ) {
 
       doc.switchToPage(i);
 
+
+      this.drawFooter(
+        doc,
+        company,
+      );
+
+
       doc
         .font('Helvetica')
-        .fontSize(8)
+        .fontSize(7)
         .fillColor('#9ca3af')
         .text(
-          `Page ${i + 1 - range.start} / ${range.count}`,
-          50,
-          doc.page.height - 22,
+          `Page ${
+            i + 1 - range.start
+          } / ${range.count}`,
+          40,
+          doc.page.height - 18,
           {
-            width: 495,
+            width: 515,
             align: 'right',
           },
         );
     }
+
+
+    // ==========================================================
+    // FIN
+    // ==========================================================
 
     doc.end();
 
     return doc;
   }
 }
+

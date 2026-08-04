@@ -1,37 +1,94 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
+import {
+  Module,
+} from '@nestjs/common';
 
-import { AuthService } from './auth.service';
-import { UsersModule } from '../users/users.module';
-import { AuthController } from './auth.controller';
-import { JwtStrategy } from './jwt.strategy';
+import {
+  JwtModule,
+} from '@nestjs/jwt';
 
-import { PrismaModule } from '../prisma/prisma.module';
+import {
+  PassportModule,
+} from '@nestjs/passport';
 
+import {
+  ConfigModule,
+  ConfigService,
+} from '@nestjs/config';
 
-console.log(
-  "JWT SECRET AU DEMARRAGE:",
-  process.env.JWT_SECRET
-);
+import {
+  AuthService,
+} from './auth.service';
+
+import {
+  UsersModule,
+} from '../users/users.module';
+
+import {
+  AuthController,
+} from './auth.controller';
+
+import {
+  JwtStrategy,
+} from './jwt.strategy';
+
+import {
+  PrismaModule,
+} from '../prisma/prisma.module';
 
 
 @Module({
 
   imports: [
 
+    ConfigModule,
+
     PrismaModule,
 
     UsersModule,
 
-    PassportModule,
+    PassportModule.register({
+      defaultStrategy: 'jwt',
+    }),
 
-    JwtModule.register({
+    JwtModule.registerAsync({
 
-      secret: process.env.JWT_SECRET,
+      imports: [
+        ConfigModule,
+      ],
 
-      signOptions: {
-        expiresIn: '1d',
+      inject: [
+        ConfigService,
+      ],
+
+      useFactory: (
+        configService: ConfigService,
+      ) => {
+
+        const secret =
+          configService.get<string>(
+            'JWT_SECRET',
+          );
+
+
+        if (!secret) {
+
+          throw new Error(
+            'JWT_SECRET manquant',
+          );
+
+        }
+
+
+        return {
+
+          secret,
+
+          signOptions: {
+            expiresIn: '1d',
+          },
+
+        };
+
       },
 
     }),
@@ -45,13 +102,20 @@ console.log(
 
 
   providers: [
+
     AuthService,
+
     JwtStrategy,
+
   ],
 
 
   exports: [
+
     AuthService,
+
+    JwtModule,
+
   ],
 
 })

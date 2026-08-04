@@ -17,18 +17,24 @@ export class ClientsService {
   // Créer un client
   async create(data: any) {
 
+  console.log("=== CREATION CLIENT ===");
+  console.log("DATA REÇUE :", data);
 
-    await this.subscriptionService.checkClientLimit(
-      data.userId,
-    );
+  await this.subscriptionService.checkClientLimit(
+    data.userId,
+  );
 
+  console.log("LIMITE CLIENT OK");
 
-    return this.prisma.client.create({
-      data,
-    });
+  const client = await this.prisma.client.create({
+    data,
+  });
 
-  }
+  console.log("CLIENT CRÉÉ :", client);
 
+  return client;
+
+}
 
 
 

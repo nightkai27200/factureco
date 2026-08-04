@@ -1,6 +1,5 @@
 import api from "@/lib/api";
 
-
 export type Client = {
   id: string;
   name: string;
@@ -10,21 +9,17 @@ export type Client = {
   address?: string;
 };
 
-
-
 export async function getClients(): Promise<Client[]> {
 
-  const response = await api.get<Client[]>("/clients");
+  const response =
+    await api.get<Client[]>("/clients");
 
   return response.data;
-
 }
 
-
-
 export async function createClient(
-  data: Omit<Client,"id">
-){
+  data: Omit<Client, "id">
+) {
 
   const response =
     await api.post<Client>(
@@ -33,14 +28,25 @@ export async function createClient(
     );
 
   return response.data;
-
 }
 
+export async function updateClient(
+  id: string,
+  data: Omit<Client, "id">
+) {
 
+  const response =
+    await api.patch<Client>(
+      `/clients/${id}`,
+      data
+    );
+
+  return response.data;
+}
 
 export async function deleteClient(
-  id:string
-){
+  id: string
+) {
 
   await api.delete(
     `/clients/${id}`
